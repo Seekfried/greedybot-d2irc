@@ -249,6 +249,7 @@ class FriedyBot:
                         self.found_match(game)
                     else:
                         self.send_notice(user, "Already added for " + pickentry.gameId.gametypeId.title, chattype)
+                        return
         
         #add with gametypes
         #example: !add duel 2v2tdm
