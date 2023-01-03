@@ -475,11 +475,13 @@ class FriedyBot:
         if isadmin:
             if len(argument) > 1 and self.cmdresults["cmds"][argument[1]] is not None:
                 self.send_notice(user, self.cmdresults["cmds"][argument[1]], chattype)
-            self.send_notice(user, self.cmdresults["misc"]["helpadmin"], chattype)
+            else:
+                self.send_notice(user, self.cmdresults["misc"]["helpadmin"], chattype)
         else:
             if len(argument) > 1 and self.cmdresults["cmds"][argument[1]] is not None:
                 self.send_notice(user, self.cmdresults["cmds"][argument[1]], chattype)
-            self.send_notice(user, self.cmdresults["misc"]["help"], chattype)
+            else:
+                self.send_notice(user, self.cmdresults["misc"]["help"], chattype)
 
     def command_kill(self, user, argument, chattype, isadmin):
         #command for marking users with xonotic flavour
