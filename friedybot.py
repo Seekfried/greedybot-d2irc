@@ -378,7 +378,7 @@ class FriedyBot:
                         resultText += playerentry.playerId.ircName + " "
                     else:
                         resultText += playerentry.playerId.discordName + " "
-        self.send_notice(user, resultText, chattype)
+            self.send_notice(user, resultText, chattype)
 
     def command_server(self, user, argument, chattype, isadmin):
         #!server without arguments shows all available servers
