@@ -1,0 +1,29 @@
+<html>
+    <head>
+        <script type="text/javascript" src="jquery-1.6.2.min.js"></script>
+        <script type="text/javascript" src="jquery.bracket.min.js"></script>
+        <script type="text/javascript" src="values.js"></script>
+        <link rel="stylesheet" type="text/css" href="jquery.bracket.min.css" />
+        <script type="text/javascript">
+            
+            $(function() {
+                $("#cupheader").text(cuptitle);
+                $('.demo').bracket({
+                    init: minimalData /* data to initialize the bracket with */ })
+            })
+        </script>
+        <style>
+            body {
+                background-color: #333;
+            }
+            h1{
+                margin-left: 50px;
+                color:#eee
+            }
+        </style> 
+    </head>
+    <body>
+        <h1 id="cupheader"></h1>
+        <div class="demo"></div>
+    </body>
+</html>

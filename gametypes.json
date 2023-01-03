@@ -1,0 +1,42 @@
+{
+    "duel": {
+        "playerCount": 2,
+        "teamCount": 2,
+        "statsName": "duel"
+    },
+    "2v2tdm": {
+        "playerCount": 4,
+        "teamCount": 2,
+        "statsName": "tdm"
+    },
+    "4v4tdm": {
+        "playerCount": 8,
+        "teamCount": 2,
+        "statsName": "tdm"
+    },
+    "3v3ctf": {
+        "playerCount": 6,
+        "teamCount": 2,
+        "statsName": "ctf"
+    },
+    "4v4ctf": {
+        "playerCount": 8,
+        "teamCount": 2,
+        "statsName": "ctf"
+    },
+    "5v5ctf": {
+        "playerCount": 10,
+        "teamCount": 2,
+        "statsName": "ctf"
+    },
+    "2v2v2ca": {
+        "playerCount": 6,
+        "teamCount": 3,
+        "statsName": "ca"
+    },
+    "3v3v3ca": {
+        "playerCount": 9,
+        "teamCount": 3,
+        "statsName": "ca"
+    }
+}

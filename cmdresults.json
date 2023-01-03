@@ -1,0 +1,26 @@
+{
+    "misc":{        
+        "help":"Possible commands: !register !add !remove !renew !server !who",
+        "helpadmin":"Possible commands: !register !add !remove !renew !server !who !addserver !addgametype !pull !removeserver !removegametype",    
+        "nogame":"No game found! Possible gametypes: ",
+        "registsucces":"{0} registered Xonstat account #{1}: {2} (Xonstat profile: http://stats.xonotic.org/player/{1})",
+        "restricted":"You dont have the rights for this command!",
+        "wrongcommand":"Invalid command type !help for list of commands",
+        "pugtimewarn":"Your added games will expire in 20 minutes, type !renew to renew your games"
+    },
+    "cmds":{
+        "register":"Connect your account with your XonStats (stats.xonotic.org): !register <xonstats-id>",
+        "add":"Add to all current pickup games or specific games: !add [<gametype>]",
+        "renew":"Renew pickup games",
+        "remove":"Remove from all pickup games or specific games: !remove [<gametype>]",
+        "server":"Show all available Xonotic servers or specific server and their IP: !server <servername>",
+        "pull":"remove specific player from pickup games: !pull [<players>]",
+        "who":"List all current pickup games with players",
+        "kill":"Command for marking users with xonotic flavour",
+        "addgametype":"To add gametype: !addgametype <gametypename> <playercount> <teamcount> <statsname>",
+        "addserver":"To add server: !addserver <servername> <ip:port>",
+        "removegametype":"To delete gametype: !removegametype [<gametypename>]",
+        "removeserver":"To delete server: !removeserver [<servername>]",
+        "cupstart":"To generate cup brackets: !cupstart <cuptitle> [<players/teams>]"
+    }
+}

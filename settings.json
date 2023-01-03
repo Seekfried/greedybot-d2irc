@@ -1,0 +1,20 @@
+{
+    "irc": {
+        "server": "",
+        "port": "",
+        "channel": "#",
+        "nickname": "",
+        "botowner": "",
+        "quitmsg": "Cya!"
+    },
+    "discord": {
+        "token": "",
+        "botowner": "",
+        "server": "",
+        "channel": ""
+    },
+    "bot": {
+        "pugtimewarning": 2400,
+        "pugtimeout": 3600       
+    }
+}

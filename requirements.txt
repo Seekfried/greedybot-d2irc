@@ -1,0 +1,6 @@
+peewee
+requests
+numpy
+html2image
+discord.py
+irc
