@@ -493,12 +493,12 @@ class FriedyBot:
 
         if len(argument) > 1:
             if random.random() <= self.xonotic["chance"]:
-                print(random.choice(self.xonotic["suicides"]).format(killer))
+                self.send_all(random.choice(self.xonotic["suicides"]).format(killer))
             else:
                 victim = argument[1]
-                print(random.choice(self.xonotic["kills"]).format(killer, victim))
+                self.send_all(random.choice(self.xonotic["kills"]).format(killer, victim))
         else:
-            print(random.choice(self.xonotic["suicides"]).format(killer))
+            self.send_all(random.choice(self.xonotic["suicides"]).format(killer))
 
     def command_bridge(self, user, argument, chattype, isadmin):
         #toggle on/off if specific user-messages should be bridged (future)
