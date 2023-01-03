@@ -430,7 +430,8 @@ class FriedyBot:
                 except:
                     self.send_notice(user, "Gametype already registered!", chattype)
                 self.send_notice(user, "Gametype " + argument[1] + " added.", chattype)
-            self.send_notice(user, "To add gametype: !addgametype <gametypename> <playercount> <teamcount> <statsname>", chattype)
+            else:
+                self.send_notice(user, "To add gametype: !addgametype <gametypename> <playercount> <teamcount> <statsname>", chattype)
         else:
             self.send_notice(user, self.cmdresults["misc"]["restricted"], chattype)
 
@@ -448,7 +449,8 @@ class FriedyBot:
                         resultText += serverentry + " not found. "
 
                 self.send_notice(user, resultText, chattype)
-            self.send_notice(user, "To delete server: !removeserver [<servername>]", chattype)
+            else:
+                self.send_notice(user, "To delete server: !removeserver [<servername>]", chattype)
         else:
             self.send_notice(user, self.cmdresults["misc"]["restricted"], chattype)
     
@@ -465,7 +467,8 @@ class FriedyBot:
                     else:
                         resultText += gametypeentry + " not found. "
                 self.send_notice(user, resultText, chattype)
-            self.send_notice(user, "To delete gametype: !removegametype [<gametypename>]", chattype)
+            else:
+                self.send_notice(user, "To delete gametype: !removegametype [<gametypename>]", chattype)
         else:
             self.send_notice(user, self.cmdresults["misc"]["restricted"], chattype)
     
