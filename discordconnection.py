@@ -87,9 +87,9 @@ async def on_message(message):
     bot.ircconnect.send_my_message("%s: %s" % (message.author.name, content))
 
     if message.content.startswith('!'):
-        if "moderator" in [y.name.lower() for y in message.author.roles]:
+        if settings["modrole"] in [y.name.lower() for y in message.author.roles]:
             bot.send_command(message.author, message.content, "discord", True)
-        elif not "moderator" in [y.name.lower() for y in message.author.roles]:
+        else:
             bot.send_command(message.author, message.content, "discord", False)
 
 @client.event

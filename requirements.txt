@@ -1,6 +1,6 @@
-peewee
-requests
-numpy
-html2image
-discord.py
-irc
+discord.py==2.1.1
+html2image==2.0.1
+irc==20.1.0
+numpy==1.24.2
+peewee==3.15.4
+requests==2.28.2
