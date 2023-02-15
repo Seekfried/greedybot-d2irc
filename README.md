@@ -8,7 +8,7 @@ A pickupbot for managing Xonotic pickup games
 - command for cup bracket generation (**needs chromium-based browser installed**)
 
 ## Installation and usage
----
+
 **Note**: friedybot-d2irc requires Python >= 3.8, as it depends on [discord.py](https://github.com/Rapptz/discord.py)
 
 Download the code from this repository and configure setting.json (see [Configuration](https://github.com/Seekfried/friedybot-d2irc#configuration))
@@ -40,7 +40,7 @@ python startbot.py
 ```
 
 ## Configuration
----
+
 First you need to create a Discord bot user, which you can do by following the instructions [here](https://github.com/reactiflux/discord-irc/wiki/Creating-a-discord-bot-&-getting-a-token).
 
 The token is needed for the settings.json.
@@ -82,7 +82,6 @@ There are three other different setting files:
 - **xonotic.json**: xonotic flavoured messages for the !kill command
 
 ## Commands
----
 
 ### Player commands
 - **!register**: Connect your account with your XonStats (stats.xonotic.org): !register \<xonstats-id>
