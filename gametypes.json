@@ -29,14 +29,54 @@
         "teamCount": 2,
         "statsName": "ctf"
     },
-    "2v2v2ca": {
+    "2v2ca": {
+        "playerCount": 4,
+        "teamCount": 2,
+        "statsName": "ca"
+    },
+    "3v3ca": {
+        "playerCount": 6,
+        "teamCount": 2,
+        "statsName": "ca"
+    },
+    "4v4ca": {
+        "playerCount": 8,
+        "teamCount": 2,
+        "statsName": "ca"
+    },
+    "2v2ca3": {
         "playerCount": 6,
         "teamCount": 3,
         "statsName": "ca"
     },
-    "3v3v3ca": {
+    "3v3ca3": {
         "playerCount": 9,
         "teamCount": 3,
         "statsName": "ca"
+    },
+    "4v4ca3": {
+        "playerCount": 12,
+        "teamCount": 3,
+        "statsName": "ca"
+    },
+    "2v2ca4": {
+        "playerCount": 8,
+        "teamCount": 4,
+        "statsName": "ca"
+    },
+    "3v3ca4": {
+        "playerCount": 12,
+        "teamCount": 4,
+        "statsName": "ca"
+    },
+    "4v4ca4": {
+        "playerCount": 16,
+        "teamCount": 4,
+        "statsName": "ca"
+    },
+    "l4d2": {
+        "playerCount": 4,
+        "teamCount": 2,
+        "statsName": "l4d2"
     }
 }
