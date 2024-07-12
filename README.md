@@ -90,6 +90,7 @@ There are three other different setting files:
 - **!remove**: Remove from all pickup games or specific games: !remove \[\<gametype>]
 - **!server**: Show all available Xonotic servers or specific server and their IP: !server \<servername>
 - **!who**: List all current pickup games with players
+- **!online**: List all current online discord-members for irc-users and vice versa
 - **!kill**: Command for marking users with xonotic flavour (*see xonotic.json for more*)
 - **!bridge**: Switch bridge functionality on or off (for yourself)
 

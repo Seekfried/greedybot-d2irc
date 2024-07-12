@@ -12,7 +12,7 @@ from discordconnection import DiscordConnector
 
 class FriedyBot:
     def __init__(self, settings, cmdresults, xonotic):
-        self.pickupText = ""
+        self.pickupText = "Pickups: "
         self.picktimer = None
         self.settings = settings
         self.cmdresults = cmdresults
@@ -162,11 +162,17 @@ class FriedyBot:
         #sends current pickup games to all channels
         #result: "(1/2) duel (1/4) 2v2tdm"
         testgames = PickupGames.select().where(PickupGames.isPlayed == False) ## ToDo wenn letzter eintrag gelöscht wird 
-        self.pickupText = "Pickups: "
-        for testgame in testgames:
-            self.pickupText += testgame.gametypeId.title + " (" + str(len(testgame.addedplayers)) + "/" + str(testgame.gametypeId.playerCount) + ") "
-        self.send_all(self.pickupText)
+        if not testgames.exists() and self.pickupText == "Pickups: ":
+            return
 
+        if not testgames.exists() and self.pickupText != "Pickups: ":            
+            self.pickupText = "Pickups: " 
+            self.send_all(self.pickupText)       
+        else:
+            self.pickupText = "Pickups: "
+            for testgame in testgames:
+                self.pickupText += testgame.gametypeId.title + " (" + str(len(testgame.addedplayers)) + "/" + str(testgame.gametypeId.playerCount) + ") "
+            self.send_all(self.pickupText)
     """
     Commands for IRC and discord
         Naming Convention for bot methods is command_yourcommand
@@ -516,4 +522,10 @@ class FriedyBot:
         cuppath = get_cuppicture(argument)
         self.discordconnect.send_my_file(cuppath)
         self.send_all("Generate Cup...")
+
+    def command_online(self, user, argument, chattype, isadmin):
+        if chattype == "irc":
+            self.send_all("Online are: " + ", ".join(self.discordconnect.get_online_members()))
+        else:
+            self.send_all("Online are: " + ", ".join(self.ircconnect.channels[self.settings["irc"]["channel"]]._users.keys()))
 

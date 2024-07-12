@@ -9,6 +9,9 @@ __pycache__/
 #Visual Code
 .vscode
 
+#SQLite
+pickups.db
+
 # Distribution / packaging
 .Python
 build/

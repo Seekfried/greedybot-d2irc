@@ -11,6 +11,9 @@ thread_lock = None
 settings = None
 intents = discord.Intents.default()
 intents.message_content = True
+intents.guilds = True
+intents.members = True
+intents.presences = True
 
 client = discord.Client(intents=intents)
 server = None
@@ -39,6 +42,13 @@ class DiscordConnector:
     def send_my_file(self, path):
         global client
         asyncio.run_coroutine_threadsafe(send_my_file_async(path), client.loop)
+
+    def get_online_members(self):
+        online_members =[]
+        for user in channel.guild.members:
+            if str(user.status) != "offline":
+                online_members.append(user.display_name)
+        return online_members
     
     def run(self):
         global settings
@@ -91,6 +101,12 @@ async def on_message(message):
             bot.send_command(message.author, message.content, "discord", True)
         else:
             bot.send_command(message.author, message.content, "discord", False)
+
+@client.event
+async def on_presence_update(before, after):
+    pass #todo delete pickup if going offline
+    # await channel.send(f"""{after}'s activity changed from {before.status} to {after.status}""")
+    # bot.ircconnect.send_my_message(f"""{after}'s activity changed from {before.status} to {after.status}""")
 
 @client.event
 async def on_ready():
