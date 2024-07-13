@@ -156,7 +156,39 @@ class FriedyBot:
                 pl.ircName = newnick
                 pl.save()
             db.close()
-        
+
+    def remove_user_on_exit(self, user,chattype):        
+        gameentries = None
+        player = None
+        with self.thread_lock:
+            db.connect()
+            try:                
+                #check where user removed from
+                if chattype == "irc": 
+                    player = Players.select().where(Players.ircName == user).first()
+                else:
+                    player = Players.select().where(Players.discordName == user.name).first()
+
+                #check if player is already in database
+                if player is not None:
+                    gameentries = PickupEntries.select().join(PickupGames).where(PickupGames.isPlayed == False).where(PickupEntries.playerId == player)
+                
+                #send message if theres is no active pickup game
+                if player is None or not gameentries.exists():
+                    return
+                else:                
+                    #!remove without gametype, remove all entries and if only player removes pickup game completely
+                    for gameentry in gameentries:
+                        gid = gameentry.gameId
+                        gameentry.delete_instance()
+                        game = PickupGames.select().where(PickupGames.id == gid).first()
+                        if len(game.addedplayers) == 0:
+                            game.delete_instance()
+                    self.build_pickuptext()
+            except Exception as e:
+                print("Error in remove_user_on_exit: ", e)
+            db.close()
+
 
     def build_pickuptext(self):
         #sends current pickup games to all channels
@@ -503,11 +535,20 @@ class FriedyBot:
         else:
             killer = user.name
 
-        if len(argument) > 1:
-            if random.random() <= self.xonotic["chance"]:
+        if len(argument) > 1:    
+            #get victim name        
+            victim = argument[1]
+            #fill user list with discord/irc users
+            discord_users = self.discordconnect.get_online_members()
+            irc_users = list(self.ircconnect.channels[self.settings["irc"]["channel"]]._users.keys())
+            #random chance 
+            is_random_chance = random.random() <= self.xonotic["chance"]
+            #victim is real user
+            is_real_user = victim in discord_users or victim in irc_users
+
+            if is_random_chance or (victim == killer) or not is_real_user:
                 self.send_all(random.choice(self.xonotic["suicides"]).format(killer))
             else:
-                victim = argument[1]
                 self.send_all(random.choice(self.xonotic["kills"]).format(killer, victim))
         else:
             self.send_all(random.choice(self.xonotic["suicides"]).format(killer))
@@ -525,7 +566,7 @@ class FriedyBot:
 
     def command_online(self, user, argument, chattype, isadmin):
         if chattype == "irc":
-            self.send_all("Online are: " + ", ".join(self.discordconnect.get_online_members()))
+            self.ircconnect.send_my_message("Online are: " + ", ".join(self.discordconnect.get_online_members()))
         else:
-            self.send_all("Online are: " + ", ".join(self.ircconnect.channels[self.settings["irc"]["channel"]]._users.keys()))
+            self.discordconnect.send_my_message("Online are: " + ", ".join(self.ircconnect.channels[self.settings["irc"]["channel"]]._users.keys()))
 

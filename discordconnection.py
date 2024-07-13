@@ -104,7 +104,9 @@ async def on_message(message):
 
 @client.event
 async def on_presence_update(before, after):
-    pass #todo delete pickup if going offline
+    if after.status.name == "offline":
+        bot.remove_user_on_exit(after, "discord")
+    #pass #todo delete pickup if going offline
     # await channel.send(f"""{after}'s activity changed from {before.status} to {after.status}""")
     # bot.ircconnect.send_my_message(f"""{after}'s activity changed from {before.status} to {after.status}""")
 

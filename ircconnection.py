@@ -38,10 +38,10 @@ class IrcConnector(irc.bot.SingleServerIRCBot):
             self.bot.change_name(before, after)
 
     def on_part(self, connection, event):
-        self.bot.send_command(event.source.nick, "!remove", "irc", False)
+        self.bot.remove_user_on_exit(event.source.nick, "irc")
 
     def on_quit(self, connection, event):
-        self.bot.send_command(event.source.nick, "!remove", "irc", False)
+        self.bot.remove_user_on_exit(event.source.nick, "irc")
     
     def on_nicknameinuse(self, connection, event):
         connection.nick(connection.get_nickname() + "y")
