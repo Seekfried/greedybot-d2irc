@@ -72,13 +72,14 @@ class IrcConnector(irc.bot.SingleServerIRCBot):
                 self.bot.discordconnect.close()
                 return
 
-        self.bot.discordconnect.send_my_message("<"+ author + "> " + message)
-
-        if message.startswith('!'):
+        if message.startswith('!'):            
+            self.bot.discordconnect.send_my_message("<"+ author + "> " + message)
             if self.channels[event.target].is_oper(author):
                 self.bot.send_command(author, message, "irc", True)
             else:
-                self.bot.send_command(author, message, "irc", False)
+                self.bot.send_command(author, message, "irc", False)            
+        else:
+            self.bot.discordconnect.send_my_message_with_mention("<"+ author + "> " + message)
     
     def run(self):
         self.start()

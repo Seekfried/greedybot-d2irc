@@ -17,7 +17,7 @@ def get_cuppicture(arguments):
     newTeam = teamtext.replace("'0'", "null")
 
     ROOT_DIR = os.path.realpath(os.path.join(os.path.dirname(__file__), '.'))
-    with open(os.path.join(ROOT_DIR, 'templates', 'values.js'), "r+") as f:
+    with open(os.path.join(ROOT_DIR, 'results', 'values.js'), "w+") as f:
         f.seek(0)
         f.write(f"var cuptitle = '{title}';")
         f.write("var minimalData = {teams:" + newTeam + "}")
@@ -27,7 +27,7 @@ def get_cuppicture(arguments):
     hti = Html2Image(output_path='bracket/results')
     hti.load_file('bracket/templates/jquery-1.6.2.min.js')
     hti.load_file('bracket/templates/jquery.bracket.min.js')
-    hti.load_file('bracket/templates/values.js')
+    hti.load_file('bracket/results/values.js')
     cupfilestr = title + "_" + time.strftime("%Y%m%d-%H%M%S") + ".png"
     hti.screenshot(html_file='bracket/templates/elimination.html',css_file="bracket/templates/jquery.bracket.min.css", save_as=cupfilestr , size=(725, heigthcuppic))
     return os.path.join(ROOT_DIR, 'results', cupfilestr)
@@ -37,6 +37,6 @@ def get_cuppicture(arguments):
 #commandstring = "seek-cup hotdog seeky grunt silence ramses mirio packer ferreus proraide ploplo klaspes gatts packer ferreus proraide ploplo packer ferreus proraide ploplo klaspes gatts packer ferreus proraide ploplo"
 #commandstring = "seek-cup hotdog seeky grunt silence ramses mirio packer ferreus proraide ploplo klaspes gatts packer ferreus proraide ploplo"
 #commandstring = "seek-cup hotdog seeky grunt silence ramses mirio packer ferreus"
-#commandstring = "!cupstart seek-cup hotdog seeky grunt silence"
-#commandstring = commandstring.split()
-#print(get_cuppicture(commandstring))
+commandstring = "!cupstart seek-cup hotdog seeky grunt silence"
+commandstring = commandstring.split()
+print(get_cuppicture(commandstring))

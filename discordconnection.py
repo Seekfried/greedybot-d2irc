@@ -39,6 +39,13 @@ class DiscordConnector:
         global client
         asyncio.run_coroutine_threadsafe(send_my_message_async(message), client.loop)
 
+    def send_my_message_with_mention(self, message):
+        global client
+        for user in channel.guild.members:
+            if message.find('@' + user.name) != -1:
+                message = message.replace('@' + user.name, user.mention)
+        asyncio.run_coroutine_threadsafe(send_my_message_async(message), client.loop)
+
     def send_my_file(self, path):
         global client
         asyncio.run_coroutine_threadsafe(send_my_file_async(path), client.loop)
@@ -47,7 +54,7 @@ class DiscordConnector:
         online_members =[]
         for user in channel.guild.members:
             if str(user.status) != "offline":
-                online_members.append(user.display_name)
+                online_members.append(user.name)
         return online_members
     
     def run(self):
@@ -95,6 +102,9 @@ async def on_message(message):
     
     content = message.clean_content
     bot.ircconnect.send_my_message("%s: %s" % (message.author.name, content))
+
+    for attachment in message.attachments:
+        bot.ircconnect.send_my_message("URL: " + attachment.url)
 
     if message.content.startswith('!'):
         if settings["modrole"] in [y.name.lower() for y in message.author.roles]:

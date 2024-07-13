@@ -575,12 +575,17 @@ class FriedyBot:
             #random chance 
             is_random_chance = random.random() <= self.xonotic["chance"]
             #victim is real user
-            is_real_user = victim in discord_users or victim in irc_users
+            is_real_irc_user = victim in irc_users
+            is_real_discord_user = victim in discord_users
+            is_real_user = is_real_irc_user or is_real_discord_user
 
             if is_random_chance or (victim == killer) or not is_real_user:
                 self.send_all(random.choice(self.xonotic["suicides"]).format(killer))
             else:
-                self.send_all(random.choice(self.xonotic["kills"]).format(killer, victim))
+                self.ircconnect.send_my_message(random.choice(self.xonotic["kills"]).format(killer, victim))                
+                if is_real_discord_user:
+                    victim = "@" + victim
+                self.discordconnect.send_my_message_with_mention(random.choice(self.xonotic["kills"]).format(killer, victim))
         else:
             self.send_all(random.choice(self.xonotic["suicides"]).format(killer))
 
