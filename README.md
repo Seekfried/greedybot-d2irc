@@ -9,7 +9,7 @@ A pickupbot for managing Xonotic pickup games
 
 ## Installation and usage
 
-**Note**: friedybot-d2irc requires Python >= 3.8, as it depends on [discord.py](https://github.com/Rapptz/discord.py)
+**Note**: friedybot-d2irc requires Python >= 3.9, as it depends on [numpy 2.0.0](https://numpy.org/) and [discord.py](https://github.com/Rapptz/discord.py).
 
 Download the code from this repository and configure setting.json (see [Configuration](https://github.com/Seekfried/friedybot-d2irc#configuration))
 

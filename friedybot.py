@@ -68,7 +68,7 @@ class FriedyBot:
                                 self.send_notice(None, pugentry.playerId.discordMention +  " " + self.cmdresults["misc"]["pugtimewarn"], "discord")                                                             
                     else:
                         if mindiff > warntime - pugdiff:
-                             mindiff = warntime - pugdiff
+                            mindiff = warntime - pugdiff
                         else:
                             break
                 if not PickupGames.select().where(PickupGames.isPlayed == False).exists():
@@ -316,8 +316,44 @@ class FriedyBot:
             queryset += gametype.title + " "
         self.send_notice(user, "Possible gametypes: " + queryset, chattype)
 
+
+    def __get_active_player_entries(self, player) -> PickupEntries:
+        if player is not None:
+            return PickupEntries.select().join(PickupGames).where(PickupGames.isPlayed == False).where(PickupEntries.playerId == player)
+        return None
+
+    def __withdraw_player_from_all(self, player) -> bool:
+        #check if player is already in database
+        if player is not None:
+            gameentries = self.__get_active_player_entries(player)
+
+        if player is None or not gameentries.exists():
+            return False
+        
+        for gameentry in gameentries:
+            gid = gameentry.gameId
+            gameentry.delete_instance()
+            game = PickupGames.select().where(PickupGames.id == gid).first()
+            if len(game.addedplayers) == 0:
+                game.delete_instance()
+        
+        return True
+        
+    def __withdraw_player_from_gametype(self, player, gametypeId) -> bool:
+        if player is None:
+            return False
+        
+        gtype = GameTypes.select().where(GameTypes.title == gametypeId).first()
+        if gtype is not None:     
+            games = PickupGames.select().where(PickupGames.gametypeId == gtype.id, PickupGames.isPlayed == False)
+            for game in games:
+                PickupEntries.delete().where(PickupEntries.playerId == player, PickupEntries.gameId == game.id).execute()
+                if len(game.addedplayers) == 0:
+                    game.delete_instance()
+                    
+        return True
+
     def command_remove(self, user, argument, chattype, isadmin):
-        gameentries = None
         player = None
         
         #check where user removed from
@@ -325,43 +361,38 @@ class FriedyBot:
             player = Players.select().where(Players.ircName == user).first()
         else:
             player = Players.select().where(Players.discordName == user.name).first()
-
-        #check if player is already in database
-        if player is not None:
-            gameentries = PickupEntries.select().join(PickupGames).where(PickupGames.isPlayed == False).where(PickupEntries.playerId == player)
         
-        #send message if theres is no active pickup game
-        if player is None or not gameentries.exists():
-            self.send_notice(user, "No game added!", chattype)
+        result: bool = False
         
         #!remove without gametype, remove all entries and if only player removes pickup game completely
         if len(argument) == 1:
-            for gameentry in gameentries:
-                gid = gameentry.gameId
-                gameentry.delete_instance()
-                game = PickupGames.select().where(PickupGames.id == gid).first()
-                if len(game.addedplayers) == 0:
-                    game.delete_instance()
-
+            result = self.__withdraw_player_from_all(player)
+        
         #just removes gametypes that are given and if last player removes pickup game completely
         #example: !remove duel
         else:
-            for gtypeentries in argument[1:]:
-                gtype = GameTypes.select().where(GameTypes.title == gtypeentries).first()
-                if gtype is not None:     
-                    games = PickupGames.select().where(PickupGames.gametypeId == gtype.id, PickupGames.isPlayed == False)
-                    for game in games:
-                        PickupEntries.delete().where(PickupEntries.playerId == player, PickupEntries.gameId == game.id).execute()
-                        if len(game.addedplayers) == 0:
-                            game.delete_instance()
+            for gtypeentry in argument[1:]:
+                result = self.__withdraw_player_from_gametype(player, gtypeentry)
         
-        self.build_pickuptext()   
+        if not result:
+            self.send_notice(user, "No game added!", chattype)
+        else:
+            self.build_pickuptext()   
 
     def command_pull(self, user, argument, chattype, isadmin):
         #todo removes pickup player from games (just discord-moderators or irc-operators)
         if isadmin:
             if len(argument) > 1:
-                self.build_pickuptext()
+                player = None
+                
+                #check where user pulled from
+                player = Players.select().where((Players.ircName == argument[1])|(Players.discordName == argument[1])).first()
+                
+                result: bool = self.__withdraw_player_from_all(player)
+                if not result:
+                    self.send_notice(user, "No game added!", chattype)
+                else:
+                    self.build_pickuptext()
         else:
             self.send_notice(user, self.cmdresults["misc"]["restricted"], chattype)
         
