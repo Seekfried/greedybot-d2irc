@@ -386,10 +386,7 @@ class FriedyBot:
                 player = None
                 
                 #check where user pulled from
-                if chattype == "irc": 
-                    player = Players.select().where(Players.ircName == user).first()
-                else:
-                    player = Players.select().where(Players.discordName == user).first()
+                player = Players.select().where((Players.ircName == argument[1])|(Players.discordName == argument[1])).first()
                 
                 result: bool = self.__withdraw_player_from_all(player)
                 if not result:
