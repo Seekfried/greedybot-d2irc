@@ -43,7 +43,7 @@ python startbot.py
 
 First you need to create a Discord bot user, which you can do by following the instructions [here](https://github.com/reactiflux/discord-irc/wiki/Creating-a-discord-bot-&-getting-a-token).
 
-The token is needed for the settings.json.
+The token is needed for the `settings.json` file.
 
 To get the **server and channel ID** of your discord, just go to your discord server and write down the IDs found in the URL. **(Example below)**
 
@@ -74,7 +74,7 @@ To get the **server and channel ID** of your discord, just go to your discord se
 }
 ```
 
-
+You can create your own `settings.json` file based on the template `settings_template.json`.
 
 There are three other different setting files:
 - **cmdresult.json**: command output texts and help texts
