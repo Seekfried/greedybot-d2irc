@@ -4,7 +4,7 @@
 # Declare files that will always have CRLF line endings on checkout.
 *.py text eol=crlf
 *.json text eol=crlf
-*.txt text eol= crlf
+*.txt text eol=crlf
 *.html text eol=crlf
 *.css text eol=crlf
 *.js text eol=crlf
