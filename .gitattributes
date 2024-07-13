@@ -4,6 +4,11 @@
 # Declare files that will always have CRLF line endings on checkout.
 *.py text eol=crlf
 *.json text eol=crlf
+*.txt text eol= crlf
+*.html text eol=crlf
+*.css text eol=crlf
+*.js text eol=crlf
+*.md text eol=crlf
 
 # Denote all files that are truly binary and should not be modified.
 *.db binary
