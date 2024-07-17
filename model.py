@@ -47,3 +47,10 @@ class PickupEntries(Model):
 
     class Meta:
         database = db
+
+class Subscriptions(Model):
+    playerId = ForeignKeyField(Players, backref='playersubscription', on_delete='CASCADE')
+    gametypeId = ForeignKeyField(GameTypes, backref='gamesubscription', on_delete='CASCADE')
+
+    class Meta:
+        database = db

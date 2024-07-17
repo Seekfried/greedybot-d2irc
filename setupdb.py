@@ -4,7 +4,7 @@ import json
 
 def createDatabase():
     db.connect()
-    db.create_tables([Players, GameTypes, Servers, PickupGames, PickupEntries])
+    db.create_tables([Players, GameTypes, Servers, PickupGames, PickupEntries, Subscriptions])
     db.close()
 
 def createGameTypes():

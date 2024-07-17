@@ -45,6 +45,12 @@ class IrcConnector(irc.bot.SingleServerIRCBot):
     
     def on_nicknameinuse(self, connection, event):
         connection.nick(connection.get_nickname() + "y")
+
+    def on_currenttopic(self, connection, event):
+        print(event.arguments[1])
+
+    def on_notopic(self, connection, event):
+        print(event.arguments[1])
     
     def on_welcome(self, connection, event):
         self.connection = connection
