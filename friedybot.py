@@ -596,7 +596,7 @@ class FriedyBot:
     def command_cupstart(self, user, argument, chattype, isadmin):
         #creates cup brackets and uploads to discord
         #example: !cupstart seeky-cup Seek-y Grunt hotdog packer 
-        cuppath = get_cuppicture(argument)
+        cuppath = get_cuppicture(argument, self.settings["bot"]["browser"])
         self.discordconnect.send_my_file(cuppath)
         self.send_all("Generate Cup...")
 

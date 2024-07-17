@@ -16,6 +16,7 @@
     },
     "bot": {
         "pugtimewarning": 2400,
-        "pugtimeout": 3600       
+        "pugtimeout": 3600,
+        "browser": "chrome"
     }
 }
