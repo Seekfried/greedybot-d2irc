@@ -385,14 +385,14 @@ class FriedyBot:
             if len(argument) > 1:
                 player = None
                 
-                #check where user pulled from
-                player = Players.select().where((Players.ircName == argument[1])|(Players.discordName == argument[1])).first()
+                for arg in argument[1:]:
+                    player = Players.select().where((Players.ircName == arg)|(Players.discordName == arg)).first()
                 
-                result: bool = self.__withdraw_player_from_all(player)
-                if not result:
-                    self.send_notice(user, "No game added!", chattype)
-                else:
-                    self.build_pickuptext()
+                    result: bool = self.__withdraw_player_from_all(player)
+                    if not result:
+                        self.send_notice(user, f"{arg} was not added!", chattype)
+                    else:
+                        self.build_pickuptext()
         else:
             self.send_notice(user, self.cmdresults["misc"]["restricted"], chattype)
         
