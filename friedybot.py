@@ -383,15 +383,19 @@ class FriedyBot:
         #todo removes pickup player from games (just discord-moderators or irc-operators)
         if isadmin:
             if len(argument) > 1:
+                result: bool = False
+                not_existing_players = []
                 player = None
+                for arg in argument[1:]:
+                    player = Players.select().where((Players.ircName == arg)|(Players.discordName == arg)).first()
+                    result = self.__withdraw_player_from_all(player)
+                    if not result:
+                        not_existing_players.append(arg)
                 
-                #check where user pulled from
-                player = Players.select().where((Players.ircName == argument[1])|(Players.discordName == argument[1])).first()
+                if len(not_existing_players) > 0:
+                    self.send_notice(user, f"The following player(s) was/were not added! → {", ".join(not_existing_players)} ", chattype)
                 
-                result: bool = self.__withdraw_player_from_all(player)
-                if not result:
-                    self.send_notice(user, "No game added!", chattype)
-                else:
+                if len(not_existing_players) != len(argument[1:]):
                     self.build_pickuptext()
         else:
             self.send_notice(user, self.cmdresults["misc"]["restricted"], chattype)
