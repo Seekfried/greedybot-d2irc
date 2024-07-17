@@ -393,7 +393,7 @@ class FriedyBot:
                         not_existing_players.append(arg)
                 
                 if len(not_existing_players) > 0:
-                    self.send_notice(user, f"The following player(s) was/were {not_existing_players} not added!", chattype)
+                    self.send_notice(user, f"The following player(s) was/were not added! → {", ".join(not_existing_players)} ", chattype)
                 
                 if len(not_existing_players) != len(argument[1:]):
                     self.build_pickuptext()
