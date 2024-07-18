@@ -47,15 +47,19 @@ class IrcConnector(irc.bot.SingleServerIRCBot):
         connection.nick(connection.get_nickname() + "y")
 
     def on_currenttopic(self, connection, event):
-        print(event.arguments[1])
+        self.bot.topic = event.arguments[1]
 
     def on_notopic(self, connection, event):
-        print(event.arguments[1])
+        self.bot.topic = event.arguments[1]
     
+    def on_topic(self, connection, event):
+        if event.arguments[0].find("Pickups: ") == -1:
+            self.bot.topic = event.arguments[0]
+
     def on_welcome(self, connection, event):
         self.connection = connection
         channel = self.settings["channel"]
-        
+        self.connection.privmsg("Q@CServe.quakenet.org", "AUTH " + self.settings["nickname"] + " " + self.settings["password"] )
         connection.join(channel)
         
         with self.thread_lock:

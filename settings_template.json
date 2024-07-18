@@ -2,6 +2,7 @@
     "irc": {
         "server": "",
         "port": "",
+        "password": "",
         "channel": "#",
         "nickname": "",
         "botowner": "",

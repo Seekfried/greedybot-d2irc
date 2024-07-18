@@ -55,6 +55,7 @@ To get the **server and channel ID** of your discord, just go to your discord se
     "irc": {
         "server": "",       //IRC-Server address
         "port": "",         //IRC-Server port
+        "password": "",     //IRC-Server auth password
         "channel": "#",     //Your IRC-Channelname
         "nickname": "",     //IRC-Nickname for the bot
         "botowner": "",     //IRC-User that can close the bot with the !quit command

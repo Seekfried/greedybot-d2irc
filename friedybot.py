@@ -20,6 +20,7 @@ class FriedyBot:
         self.ircconnect = None
         self.discordconnect = None
         self.thread_lock = None
+        self.topic = ""
 
         db.connect()
         queryset = PickupGames.delete().where(PickupGames.isPlayed == False)
@@ -160,6 +161,16 @@ class FriedyBot:
                     matchtext += pugplayer.playerId.discordMention + " (" + pugplayer.playerId.statsName + ") "
                     ircmatchtext += pugplayer.playerId.discordName + " (" + pugplayer.playerId.statsName + ") "
             self.send_all(matchtext, ircmatchtext)
+
+    def set_irc_topic(self):
+        #sets the current pickups as irc topic
+        try:
+            if  self.pickupText != "Pickups: ":
+                self.ircconnect.connection.topic(self.settings["irc"]["channel"], new_topic=self.pickupText)
+            else:
+                self.ircconnect.connection.topic(self.settings["irc"]["channel"], new_topic=self.topic)
+        except Exception as e:
+            print("Something wrong with topic: ", e)
     
     def send_command(self, user, argument, chattype, isadmin):
         #forwards commands from irc/discord to bot specific command
@@ -230,16 +241,19 @@ class FriedyBot:
         #result: "(1/2) duel (1/4) 2v2tdm"
         testgames = PickupGames.select().where(PickupGames.isPlayed == False) ## ToDo wenn letzter eintrag gelöscht wird 
         if not testgames.exists() and self.pickupText == "Pickups: ":
+            self.set_irc_topic()
             return
 
         if not testgames.exists() and self.pickupText != "Pickups: ":            
             self.pickupText = "Pickups: " 
-            self.send_all(self.pickupText)       
+            self.send_all(self.pickupText)     
+            self.set_irc_topic()  
         else:
             self.pickupText = "Pickups: "
             for testgame in testgames:
                 self.pickupText += testgame.gametypeId.title + " (" + str(len(testgame.addedplayers)) + "/" + str(testgame.gametypeId.playerCount) + ") "
             self.send_all(self.pickupText)
+            self.set_irc_topic()
     """
     Commands for IRC and discord
         Naming Convention for bot methods is command_yourcommand
