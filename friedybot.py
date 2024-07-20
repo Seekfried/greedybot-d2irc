@@ -402,9 +402,6 @@ class FriedyBot:
         if len(argument) > 1 and argument[1].isdigit():
             try:                
                 xonstatscoloredname,xonstatsname = self.get_statsnames(argument[1])
-                discordColoredName = self.__discord_colors(xonstatscoloredname)
-                ircColoredName = self.__irc_colors(xonstatscoloredname)
-                self.send_all(f"Player: {discordColoredName}", f"Player: {ircColoredName}")
                 pl = None
                 if xonstatsname is None:
                     self.send_notice(user, "No Player with this ID", chattype)
