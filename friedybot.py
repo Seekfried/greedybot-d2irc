@@ -5,6 +5,7 @@ from ipaddress import ip_address
 import threading
 import requests
 import random
+import re
 from datetime import datetime
 import time
 from ircconnection import IrcConnector
@@ -42,6 +43,126 @@ class FriedyBot:
             return PickupEntries.select().join(PickupGames).where(PickupGames.isPlayed == False).where(PickupEntries.playerId == player)
         return None
 
+    # this was basically taken from rcon2irc.pl
+    def __rgb_to_simple(self, r: int, g: int,b: int) -> int:
+
+        min_ = min(r,g,b)
+        max_ = max(r,g,b)
+
+        v = max_ / 15.0
+        s = (1 - min_/max_) if max_ != min_  else 0
+        if s < 0.2:
+            return 0 if v < 0.5 else 7
+
+        if max_ == min_:
+            h = 0
+        elif max_ == r:
+            h = (60 * (g - b) / (max_ - min_)) % 360
+        elif max_ == g:
+            h = (60 * (b - r) / (max_ - min_)) + 120
+        elif max_ == b:
+            h = (60 * (r - g) / (max_ - min_)) + 240
+
+        if h < 36:
+            return 1
+        elif h < 80:
+            return 3
+        elif h < 150:
+            return 2
+        elif h < 200:
+            return 5
+        elif h < 270:
+            return 4
+        elif h < 330:
+            return 6
+        else:
+            return 1
+
+    # Discord colors
+    def __discord_colors(self, qstr: str) -> str:
+        _discord_colors = [ 0, 31, 32, 33, 34, 36, 35, 0, 0, 0 ]
+
+        _all_colors = re.compile(r'(\^\d|\^x[\dA-Fa-f]{3})')
+        #qstr = ''.join([ x if ord(x) < 128 else '' for x in qstr ]).replace('^^', '^').replace(u'\x00', '') # strip weird characters
+        parts = _all_colors.split(qstr)
+        result = "```ansi\n"
+        oldcolor = None
+        while len(parts) > 0:
+            tag = None
+            txt = parts[0]
+            if _all_colors.match(txt):
+                tag = txt[1:]  # strip leading '^'
+                if len(parts) < 2:
+                    break
+                txt = parts[1]
+                del parts[1]
+            del parts[0]
+
+            if not txt or len(txt) == 0:
+                # only colorcode and no real text, skip this
+                continue
+
+            color = 7
+            if tag:
+                if len(tag) == 4 and tag[0] == 'x':
+                    r = int(tag[1], 16)
+                    g = int(tag[2], 16)
+                    b = int(tag[3], 16)
+                    color = self.__rgb_to_simple(r,g,b)
+                elif len(tag) == 1 and int(tag[0]) in range(0,10):
+                    color = int(tag[0])
+            color = _discord_colors[color]
+            if color != oldcolor:
+                result += "\u001b[1;" + str(color) + "m"
+            result += txt
+            oldcolor = color
+        result += "\u001b[0m```"
+        return result
+
+    # Method taken from zykure's bot: https://gitlab.com/xonotic-zykure/multibot
+    def __irc_colors(self, qstr: str) -> str:
+        _irc_colors = [ -1, 4, 9, 8, 12, 11, 13, -1, -1, -1 ]
+
+        _all_colors = re.compile(r'(\^\d|\^x[\dA-Fa-f]{3})')
+        #qstr = ''.join([ x if ord(x) < 128 else '' for x in qstr ]).replace('^^', '^').replace(u'\x00', '') # strip weird characters
+        parts = _all_colors.split(qstr)
+        result = "\002"
+        oldcolor = None
+        while len(parts) > 0:
+            tag = None
+            txt = parts[0]
+            if _all_colors.match(txt):
+                tag = txt[1:]  # strip leading '^'
+                if len(parts) < 2:
+                    break
+                txt = parts[1]
+                del parts[1]
+            del parts[0]
+
+            if not txt or len(txt) == 0:
+                # only colorcode and no real text, skip this
+                continue
+
+            color = 7
+            if tag:
+                if len(tag) == 4 and tag[0] == 'x':
+                    r = int(tag[1], 16)
+                    g = int(tag[2], 16)
+                    b = int(tag[3], 16)
+                    color = self.__rgb_to_simple(r,g,b)
+                elif len(tag) == 1 and int(tag[0]) in range(0,10):
+                    color = int(tag[0])
+            color = _irc_colors[color]
+            if color != oldcolor:
+                if color < 0:
+                    result += "\017\002"
+                else:
+                    result += "\003" + "%02d" % color
+            result += txt
+            oldcolor = color
+        result += "\017"
+        return result
+    
     def __withdraw_player_from_all(self, player) -> bool:
         #check if player is already in database
         if player is not None:
@@ -125,6 +246,17 @@ class FriedyBot:
             else:
                 return
 
+    def get_statsnames(self, id):
+        #get elo data of player
+        header =  {'Accept': 'application/json'}
+        response = requests.get("https://stats.xonotic.org/player/" + str(id), headers=header)
+        player = response.json()
+        if response.status_code == 200:
+            return player["player"]["nick"],player["player"]["stripped_nick"]
+        else:
+            print("Error in get_statsnames. Status code: ", response.status_code)
+            return None
+
     def get_statsname(self, id):
         #get clean XonStats nickname of player
         header =  {'Accept': 'application/json'}
@@ -155,11 +287,11 @@ class FriedyBot:
             matchtext = puggame.gametypeId.title + " ready! Players are: "
             for pugplayer in pugplayers:
                 if pugplayer.addedFrom == "irc":
-                    matchtext += pugplayer.playerId.ircName + " (" + pugplayer.playerId.statsName + ") "
-                    ircmatchtext += pugplayer.playerId.ircName + " (" + pugplayer.playerId.statsName + ") "
+                    matchtext += pugplayer.playerId.ircName + " (" + pugplayer.playerId.statsDiscordName + ") "
+                    ircmatchtext += pugplayer.playerId.ircName + " (" + pugplayer.playerId.statsIRCName + ") "
                 else:
-                    matchtext += pugplayer.playerId.discordMention + " (" + pugplayer.playerId.statsName + ") "
-                    ircmatchtext += pugplayer.playerId.discordName + " (" + pugplayer.playerId.statsName + ") "
+                    matchtext += pugplayer.playerId.discordMention + " (" + pugplayer.playerId.statsDiscordName + ") "
+                    ircmatchtext += pugplayer.playerId.discordName + " (" + pugplayer.playerId.statsIRCName + ") "
             self.send_all(matchtext, ircmatchtext)
 
     def set_irc_topic(self):
@@ -269,7 +401,11 @@ class FriedyBot:
         #command to connect player in database with their XonStats-account
         if len(argument) > 1 and argument[1].isdigit():
             try:                
-                xonstatsname = self.get_statsname(argument[1])
+                xonstatscoloredname,xonstatsname = self.get_statsnames(argument[1])
+                discordColoredName = self.__discord_colors(xonstatscoloredname)
+                ircColoredName = self.__irc_colors(xonstatscoloredname)
+                self.send_all(f"Player: {discordColoredName}", f"Player: {ircColoredName}")
+                pl = None
                 if xonstatsname is None:
                     self.send_notice(user, "No Player with this ID", chattype)
                     return
@@ -278,11 +414,15 @@ class FriedyBot:
                     if pl is None:
                         pl, plcreated = Players.get_or_create(ircName=user)
                         pl.statsId = argument[1]
-                        pl.statsName = xonstatsname                        
+                        pl.statsName = xonstatsname
+                        pl.statsIRCName = self.__irc_colors(xonstatscoloredname)
+                        pl.statsDiscordName = self.__discord_colors(xonstatscoloredname)
                         pl.save()
                     else:
                         pl.ircName = user
                         pl.statsName = xonstatsname
+                        pl.statsIRCName = self.__irc_colors(xonstatscoloredname)
+                        pl.statsDiscordName = self.__discord_colors(xonstatscoloredname)
                         pl.save()
                 else:
                     pl = Players.select().where(Players.statsId == argument[1]).first()
@@ -290,18 +430,23 @@ class FriedyBot:
                         pl, plcreated = Players.get_or_create(discordName=user.name)
                         pl.discordMention = user.mention
                         pl.statsId = argument[1]
-                        pl.statsName = xonstatsname                        
+                        pl.statsName = xonstatsname
+                        pl.statsIRCName = self.__irc_colors(xonstatscoloredname)
+                        pl.statsDiscordName = self.__discord_colors(xonstatscoloredname)
                         pl.save()
                     else:
                         pl.discordName = user.name
                         pl.discordMention = user.mention
                         pl.statsName = xonstatsname
+                        pl.statsIRCName = self.__irc_colors(xonstatscoloredname)
+                        pl.statsDiscordName = self.__discord_colors(xonstatscoloredname)
                         pl.save()                
                 if chattype == "irc":
-                    self.send_all(self.cmdresults["misc"]["registsuccess"].format(user,argument[1],xonstatsname))
+                    self.send_all(self.cmdresults["misc"]["registsuccess"].format(user,argument[1],pl.statsDiscordName), self.cmdresults["misc"]["registsuccess"].format(user,argument[1],pl.statsIRCName))
                 else:
-                    self.send_all(self.cmdresults["misc"]["registsuccess"].format(user.name,argument[1],xonstatsname))
-            except:
+                    self.send_all(self.cmdresults["misc"]["registsuccess"].format(user.name,argument[1],pl.statsDiscordName), self.cmdresults["misc"]["registsuccess"].format(user.name,argument[1],pl.statsIRCName))
+            except Exception as e:
+                print("Error in command_register: ", e, "Reason: ")
                 self.send_notice(user, "Problem with XonStats", chattype)
         else: 
             self.send_notice(user,"No ID given!",chattype)
@@ -602,6 +747,10 @@ class FriedyBot:
     def command_bridge(self, user, argument, chattype, isadmin):
         #toggle on/off if specific user-messages should be bridged (future)
         pass
+    
+    def command_testcolors(self, user, argument, chattype, isadmin):
+        # IRC colors
+        self.send_all("\x030White \x031Black \x032Blue \x033Green \x034Red \x035Brown \x036Purple \x037Orange \x038Yellow \x039Light Green \x0310Teal \x0311Light Cyan \x0312Light Blue \x0313Pink \x0314Grey \x0315Light Grey")
     
     def command_cupstart(self, user, argument, chattype, isadmin):
         #creates cup brackets and uploads to discord
