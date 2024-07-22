@@ -51,6 +51,7 @@ class FriedyBot:
 
         v = max_ / 15.0
         s = (1 - min_/max_) if max_ != min_  else 0
+        h = 0
         if s < 0.2:
             return 0 if v < 0.5 else 7
 
@@ -63,13 +64,13 @@ class FriedyBot:
         elif max_ == b:
             h = (60 * (r - g) / (max_ - min_)) + 240
 
-    color_thresholds =[(36,1), (80,3), (150,2),(200,5),(270,4),(330,6)]
+        color_thresholds =[(36,1), (80,3), (150,2),(200,5),(270,4),(330,6)]
 
-    for theshold, value in color_thresholds:
-        if h < threshold:
-            return value
+        for threshold, value in color_thresholds:
+            if h < threshold:
+                return value
 
-    return 1
+        return 1
 
     # Discord colors
     def __discord_colors(self, qstr: str) -> str:
@@ -248,16 +249,6 @@ class FriedyBot:
             return player["player"]["nick"],player["player"]["stripped_nick"]
         else:
             print("Error in get_statsnames. Status code: ", response.status_code)
-            return None
-
-    def get_statsname(self, id):
-        #get clean XonStats nickname of player
-        header =  {'Accept': 'application/json'}
-        response = requests.get("https://stats.xonotic.org/player/" + str(id), headers=header)
-        player = response.json()
-        if response.status_code == 200:
-            return player["player"]["stripped_nick"]
-        else:
             return None
 
     def get_gamestats(self, id, gtype):
@@ -737,10 +728,6 @@ class FriedyBot:
     def command_bridge(self, user, argument, chattype, isadmin):
         #toggle on/off if specific user-messages should be bridged (future)
         pass
-    
-    def command_testcolors(self, user, argument, chattype, isadmin):
-        # IRC colors
-        self.send_all("\x030White \x031Black \x032Blue \x033Green \x034Red \x035Brown \x036Purple \x037Orange \x038Yellow \x039Light Green \x0310Teal \x0311Light Cyan \x0312Light Blue \x0313Pink \x0314Grey \x0315Light Grey")
     
     def command_cupstart(self, user, argument, chattype, isadmin):
         #creates cup brackets and uploads to discord
