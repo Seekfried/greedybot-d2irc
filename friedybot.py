@@ -616,3 +616,17 @@ class FriedyBot:
         else:
             self.discordconnect.send_my_message("Online are: " + ", ".join(self.ircconnect.channels[self.settings["irc"]["channel"]]._users.keys()))
 
+    def command_lastgame(self, user, argument, chattype, isadmin):
+        lastPickupGame = PickupGames.select().where(PickupGames.isPlayed == True).order_by(PickupGames.createdDate.desc()).first()
+        lastPickupGamePlayers = lastPickupGame.addedplayers
+        resultText = lastPickupGame.gametypeId.title + ", played on " + lastPickupGame.createdDate.strftime("%Y-%m-%d") + " was played with: "
+        for player in lastPickupGamePlayers:
+            if player.addedFrom == "irc":
+                resultText += player.playerId.ircName + " "
+            else:
+                resultText += player.playerId.discordName + " "
+                
+        self.send_notice(user, resultText, chattype)
+        
+        
+        
