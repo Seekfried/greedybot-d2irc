@@ -63,20 +63,13 @@ class FriedyBot:
         elif max_ == b:
             h = (60 * (r - g) / (max_ - min_)) + 240
 
-        if h < 36:
-            return 1
-        elif h < 80:
-            return 3
-        elif h < 150:
-            return 2
-        elif h < 200:
-            return 5
-        elif h < 270:
-            return 4
-        elif h < 330:
-            return 6
-        else:
-            return 1
+    color_thresholds =[(36,1), (80,3), (150,2),(200,5),(270,4),(330,6)]
+
+    for theshold, value in color_thresholds:
+        if h < threshold:
+            return value
+
+    return 1
 
     # Discord colors
     def __discord_colors(self, qstr: str) -> str:
