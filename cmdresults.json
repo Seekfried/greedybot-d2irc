@@ -1,7 +1,7 @@
 {
     "misc":{        
-        "help":"Possible commands: !register !add !remove !renew !server !who !online",
-        "helpadmin":"Possible commands: !register !add !remove !renew !server !who !online !addserver !addgametype !pull !removeserver !removegametype",    
+        "help":"Possible commands: !register !add !remove !renew !server !who !online !subscribe !unsubscribe !promote",
+        "helpadmin":"Possible commands: !register !add !remove !renew !server !who !online !subscribe !unsubscribe !promote !addserver !addgametype !pull !removeserver !removegametype",    
         "nogame":"No game found! Possible gametypes: ",
         "registsuccess":"{0} registered Xonstat account #{1}: {2} (Xonstat profile: http://stats.xonotic.org/player/{1})",
         "restricted":"You dont have the rights for this command!",
@@ -22,6 +22,9 @@
         "addserver":"To add server: !addserver <servername> <ip:port>",
         "removegametype":"To delete gametype: !removegametype [<gametypename>]",
         "removeserver":"To delete server: !removeserver [<servername>]",
-        "cupstart":"To generate cup brackets: !cupstart <cuptitle> [<players/teams>]"
+        "cupstart":"To generate cup brackets: !cupstart <cuptitle> [<players/teams>]",
+        "subscribe":"Add to subscription to a specific gametype to get notified in !promote command: !subscribe [<gametype>]",
+        "unsubscribe":"Remove from all gametype subscriptions or specific gametype subscription: !unsubscribe [<gametype>]",
+        "promote":"Notify all players to gametype specific pickupgame: !promote [<gametype>]"
     }
 }

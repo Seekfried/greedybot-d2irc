@@ -50,6 +50,16 @@ class DiscordConnector:
         global client
         asyncio.run_coroutine_threadsafe(send_my_file_async(path), client.loop)
 
+    def give_role(self, user, gametype):
+        global client
+        rolename = "player_" + gametype
+        asyncio.run_coroutine_threadsafe(give_role_async(user, rolename), client.loop)        
+
+    def take_role(self, user, gametype):
+        global client
+        rolename = "player_" + gametype
+        asyncio.run_coroutine_threadsafe(take_role_async(user, rolename), client.loop)  
+
     def get_online_members(self):
         online_members =[]
         for user in channel.guild.members:
@@ -74,6 +84,24 @@ async def send_my_message_async(message):
 
 async def send_my_file_async(path):
     await channel.send(file=discord.File(path))
+
+async def give_role_async(user, rolename):
+    role = discord.utils.get(channel.guild.roles, name=rolename)
+    if role:
+        await user.add_roles(role)
+    else:
+        try:
+            await channel.guild.create_role(name=rolename)
+            role = discord.utils.get(channel.guild.roles, name=rolename)
+            await user.add_roles(role)
+        except Exception as e:
+            with thread_lock:
+                print("Error in give_role_async: ", e)
+
+async def take_role_async(user, rolename):
+    role = discord.utils.get(channel.guild.roles, name=rolename)
+    if role:
+        await user.remove_roles(role)
     
 @client.event
 async def on_message(message):

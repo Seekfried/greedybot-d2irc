@@ -42,6 +42,11 @@ class FriedyBot:
         if player is not None:
             return PickupEntries.select().join(PickupGames).where(PickupGames.isPlayed == False).where(PickupEntries.playerId == player)
         return None
+    
+    def __get_player_subscriptions(self, player) -> Subscriptions:
+        if player:
+            return Subscriptions.select().where(Subscriptions.playerId == player)
+        return None
 
     # this was basically taken from rcon2irc.pl
     def __rgb_to_simple(self, r: int, g: int,b: int) -> int:
@@ -241,7 +246,7 @@ class FriedyBot:
                 return
 
     def get_statsnames(self, id):
-        #get elo data of player
+        #get xonstat player names
         header =  {'Accept': 'application/json'}
         response = requests.get("https://stats.xonotic.org/player/" + str(id), headers=header)
         player = response.json()
@@ -259,6 +264,9 @@ class FriedyBot:
         if response.status_code == 200:
             if len(player):
                 elo = player[0]["mu"]
+        else:
+            print("Error in get_gamestats. Status code: ", response.status_code)
+            return None
         return elo
 
     def found_match(self, puggame):
@@ -297,8 +305,9 @@ class FriedyBot:
             db.connect()
             try:
                 method(user, argument, chattype, isadmin)
-            except:
+            except Exception as e:
                 self.send_notice(user, "Sorry, something went wrong", chattype)
+                print("Error in command:", e)
             db.close()
 
     def send_notice(self, user, message, chattype):
@@ -742,3 +751,73 @@ class FriedyBot:
         else:
             self.discordconnect.send_my_message("Online are: " + ", ".join(self.ircconnect.channels[self.settings["irc"]["channel"]]._users.keys()))
 
+    def command_subscribe(self, user, argument, chattype, isadmin):
+        gametype_args = set(argument[1:])
+        new_subscriptions = []
+        player = None
+        
+        player = self.__get_player(user, chattype)
+
+        if not player:
+            self.send_notice(user, "You need to register first (!register) to subscribe!", chattype)
+            return
+        
+        subscriptions = self.__get_player_subscriptions(player)
+
+        if gametype_args:
+            for gametype_entry in gametype_args:
+                gametype = GameTypes.select().where(GameTypes.title == gametype_entry).first()
+                if gametype and (not subscriptions or not subscriptions.where(Subscriptions.gametypeId == gametype).exists()):
+                    new_subscriptions.append(gametype.title)
+                    playersub = Subscriptions(playerId=player,gametypeId=gametype)
+                    playersub.save()
+                    if chattype == "discord":
+                        self.discordconnect.give_role(user, gametype.title)
+                else:
+                    self.send_notice(user,"You can't subscribe to: " + gametype_entry, chattype)
+            if not new_subscriptions:
+                self.command_pickups(user, argument, chattype, isadmin)
+            else:
+                self.send_notice(user, "You are now subscribed to: " + ", ".join(new_subscriptions), chattype)
+        else:
+            if subscriptions:                
+                self.send_notice(user, "You are subscribed to: " + ", ".join([x.gametypeId.title for x in subscriptions]), chattype)
+            self.command_pickups(user, argument, chattype, isadmin)
+
+    def command_unsubscribe(self, user, argument, chattype, isadmin):        
+        gametype_args = set(argument[1:])
+        player = None
+
+        player = self.__get_player(user, chattype)
+
+        if not player:
+            self.send_notice(user, "You need to register first (!register) to subscribe/unsubscribe!", chattype)
+            return
+        
+        subscriptions = self.__get_player_subscriptions(player)
+
+        if gametype_args:
+            for gametype_entry in gametype_args:
+                sub_entry = subscriptions.select().join(GameTypes).where(GameTypes.title == gametype_entry).first()
+                if sub_entry:
+                    sub_entry.delete_instance()
+                    if chattype == "discord":
+                        self.discordconnect.take_role(user, gametype_entry)
+                        pass                 
+                    #take discord role here
+                else:
+                    self.send_notice(user, "You are not subscribed to: " + gametype_entry, chattype)
+        else:
+            #TODO take all pickup discord roles here
+            subscriptions.delete().execute()
+
+        subscriptions = self.__get_player_subscriptions(player)
+
+        if subscriptions:
+            self.send_notice(user, "You are subscribed to: " + ", ".join([x.gametypeId.title for x in subscriptions]), chattype)
+        else:
+            self.send_notice(user, "You are subscribed to nothing!", chattype)
+
+    def command_promote(self, user, argument, chattype, isadmin):
+        #TODO promote for more than one gametype and also for irc
+        self.discordconnect.send_my_message_with_mention("Add to play game @player_" + argument[1])
