@@ -797,9 +797,11 @@ class FriedyBot:
         resultText = lastPickupGame.gametypeId.title + ", played on " + lastPickupGame.createdDate.strftime("%Y-%m-%d") + " was played with: "
         for player in lastPickupGamePlayers:
             if chattype == "irc":
-                resultText += player.playerId.ircName + " " + ("("+player.playerId.statsIRCName + ") " if player.playerId.statsIRCName is not None else "")
+                playername = player.playerId.ircName if player.playerId.ircName is not None else player.playerId.discordName
+                resultText += playername + " " + ("("+player.playerId.statsIRCName + ") " if player.playerId.statsIRCName is not None else "")
             else:
-                resultText += player.playerId.discordName + " " + ("("+player.playerId.statsDiscordName + ") " if player.playerId.statsDiscordName is not None else "")
+                playername = player.playerId.discordName if player.playerId.discordName is not None else player.playerId.ircName
+                resultText += playername + " " + ("("+player.playerId.statsDiscordName + ") " if player.playerId.statsDiscordName is not None else "")
                 
         self.send_notice(user, resultText, chattype)
         
