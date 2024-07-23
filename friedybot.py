@@ -6,10 +6,13 @@ import threading
 import requests
 import random
 import re
+import logging
 from datetime import datetime
 import time
 from ircconnection import IrcConnector
 from discordconnection import DiscordConnector
+
+logger = logging.getLogger("friedybot")
 
 class FriedyBot:
     def __init__(self, settings, cmdresults, xonotic):
@@ -246,32 +249,38 @@ class FriedyBot:
                 return
 
     def get_statsnames(self, id):
+        logger.info("get_statsnames: id=%s", id)
         #get xonstat player names
         header =  {'Accept': 'application/json'}
         response = requests.get("https://stats.xonotic.org/player/" + str(id), headers=header)
+        logger.info("get_statsnames: response.status.code=%s", response.status.code)
         player = response.json()
         if response.status_code == 200:
             return player["player"]["nick"],player["player"]["stripped_nick"]
         else:
-            print("Error in get_statsnames. Status code: ", response.status_code)
+            logger.error("Error in get_statsnames. Status code: ", response.status_code)
             return None
 
     def get_gamestats(self, id, gtype):
+        logger.info("get_gamestats: id=%s, gtype=%s", id, gtype)
         elo = 0
         header =  {'Accept': 'application/json'}
         response = requests.get("https://stats.xonotic.org/player/" + str(id)+ "/skill?game_type_cd=" + gtype, headers=header)
+        logger.info("get_gamestats: response.status.code=%s", response.status.code)
         player = response.json()
         if response.status_code == 200:
             if len(player):
                 elo = player[0]["mu"]
         else:
-            print("Error in get_gamestats. Status code: ", response.status_code)
+            logger.error("Error in get_gamestats. Status code: ", response.status_code)
             return None
         return elo
 
     def found_match(self, puggame):
         #excutes in case match is found and sends notification to all players
+        logger.info("found_match: puggame=%s", puggame)
         pugplayers = PickupEntries.select().where(PickupEntries.gameId == puggame.id)
+        logger.info("found_match: pugplayers.count()=%s", pugplayers.count())
         if pugplayers.count() == puggame.gametypeId.playerCount:
             puggame.isPlayed = True
             puggame.save()
@@ -288,16 +297,18 @@ class FriedyBot:
 
     def set_irc_topic(self):
         #sets the current pickups as irc topic
+        logger.info("set_irc_topic")
         try:
             if  self.pickupText != "Pickups: ":
                 self.ircconnect.connection.topic(self.settings["irc"]["channel"], new_topic=self.pickupText)
             else:
                 self.ircconnect.connection.topic(self.settings["irc"]["channel"], new_topic=self.topic)
         except Exception as e:
-            print("Something wrong with topic: ", e)
+            logger.error("Something wrong with topic: ", e)
     
     def send_command(self, user, argument, chattype, isadmin):
         #forwards commands from irc/discord to bot specific command
+        logger.info("send_command: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
         argument = argument.split()
         method_name = 'command_' + str(argument[0][1:].lower())
         method = getattr(self, method_name, self.wrong_command)
@@ -307,11 +318,12 @@ class FriedyBot:
                 method(user, argument, chattype, isadmin)
             except Exception as e:
                 self.send_notice(user, "Sorry, something went wrong", chattype)
-                print("Error in command:", e)
+                logger.error("Error in command:", e)
             db.close()
 
     def send_notice(self, user, message, chattype):
         #sends message to only discord or to specific irc-user (for future: send direct message to discord-user)
+        logger.info("send_notice: user=%s, message=%s, chattype=%s", user, message, chattype)
         if chattype == "irc":
             self.ircconnect.send_single_message(user,message)
         else:
@@ -319,6 +331,7 @@ class FriedyBot:
 
     def send_all(self, message, ircmessage = None):
         #sends message to all (irc and discord)
+        logger.info("send_all: message=%s, ircmessage=%s", message, ircmessage)
         if ircmessage is not None:
             self.ircconnect.send_my_message(ircmessage)
         else:
@@ -327,10 +340,12 @@ class FriedyBot:
     
     def wrong_command(self, user, argument, chattype, isadmin):
         #if user inputs wrong command
+        logger.info("wrong_command: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
         self.send_notice(user, self.cmdresults["misc"]["wrongcommand"], chattype)
 
     def change_name(self, oldnick, newnick):
         #changes irc-name of users in case of nickname changes
+        logger.info("change_name: oldnick=%s, newnick=%s", oldnick, newnick)
         with self.thread_lock:
             db.connect()
             pl = Players.select().where(Players.ircName == oldnick).first()
@@ -339,7 +354,9 @@ class FriedyBot:
                 pl.save()
             db.close()
 
-    def remove_user_on_exit(self, user,chattype):        
+    def remove_user_on_exit(self, user,chattype):
+        #removes user from all pickups in case of disconnect
+        logger.info("remove_user_on_exit: user=%s, chattype=%s", user, chattype)
         gameentries = None
         player = None
         with self.thread_lock:
@@ -357,13 +374,14 @@ class FriedyBot:
                     if result:
                         self.build_pickuptext()
             except Exception as e:
-                print("Error in remove_user_on_exit: ", e)
+                logger.error("Error in remove_user_on_exit: ", e)
             db.close()
 
 
     def build_pickuptext(self):
         #sends current pickup games to all channels
         #result: "(1/2) duel (1/4) 2v2tdm"
+        logger.info("build_pickuptext")
         testgames = PickupGames.select().where(PickupGames.isPlayed == False) ## ToDo wenn letzter eintrag gelöscht wird 
         if not testgames.exists() and self.pickupText == "Pickups: ":
             self.set_irc_topic()
@@ -392,6 +410,7 @@ class FriedyBot:
 
     def command_register(self, user, argument, chattype, isadmin):
         #command to connect player in database with their XonStats-account
+        logger.info("command_register: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
         if len(argument) > 1 and argument[1].isdigit():
             try:                
                 xonstatscoloredname,xonstatsname = self.get_statsnames(argument[1])
@@ -436,12 +455,14 @@ class FriedyBot:
                 else:
                     self.send_all(self.cmdresults["misc"]["registsuccess"].format(user.name,argument[1],pl.statsDiscordName), self.cmdresults["misc"]["registsuccess"].format(user.name,argument[1],pl.statsIRCName))
             except Exception as e:
-                print("Error in command_register: ", e, "Reason: ")
+                logger.error("Error in command_register: ", e, "Reason: ", e.args)
                 self.send_notice(user, "Problem with XonStats", chattype)
         else: 
             self.send_notice(user,"No ID given!",chattype)
 
     def command_add(self, user, argument, chattype, isadmin):
+        # command to add player to pickup games
+        logger.info("command_add: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
         pl = None
 
         #check where user added from
@@ -495,12 +516,16 @@ class FriedyBot:
         self.build_pickuptext()
 
     def command_pickups(self, user, argument, chattype, isadmin):
+        # command to know all available game types
+        logger.info("command_pickups: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
         queryset = ""
         for gametype in GameTypes:
             queryset += gametype.title + " "
         self.send_notice(user, "Possible gametypes: " + queryset, chattype)
 
     def command_remove(self, user, argument, chattype, isadmin):
+        # command to remove player from pickup games
+        logger.info("command_remove: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
         player = None
         
         #check where user removed from
@@ -524,7 +549,8 @@ class FriedyBot:
             self.build_pickuptext()   
 
     def command_pull(self, user, argument, chattype, isadmin):
-        #todo removes pickup player from games (just discord-moderators or irc-operators)
+        # removes pickup player from games (just discord-moderators or irc-operators)
+        logger.info("command_pull: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
         if isadmin:
             if len(argument) > 1:
                 result: bool = False
@@ -545,6 +571,7 @@ class FriedyBot:
             self.send_notice(user, self.cmdresults["misc"]["restricted"], chattype)
         
     def command_renew(self, user, argument, chattype, isadmin):
+        logger.info("command_renew: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
         gameentries = None
         player = None
 
@@ -578,7 +605,8 @@ class FriedyBot:
         self.build_pickuptext()
 
     def command_who(self, user, argument, chattype, isadmin):
-        #!who shows list of pickup games and their players
+        # command that shows list of pickup games and their players
+        logger.info("command_who: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
 
         games = PickupGames.select().where(PickupGames.isPlayed == False)
         if not games.exists():
@@ -596,7 +624,8 @@ class FriedyBot:
             self.send_notice(user, resultText, chattype)
 
     def command_server(self, user, argument, chattype, isadmin):
-        #!server without arguments shows all available servers
+        # !server without arguments shows all available servers
+        logger.info("command_server: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
         if len(argument) == 1:
             resultText = ""
             for gameserver in Servers:
@@ -614,6 +643,7 @@ class FriedyBot:
 
     def command_addserver(self, user, argument, chattype, isadmin):
         #command to add servers with their ip:port to database
+        logger.info("command_addserver: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
         if isadmin:
             if len(argument) == 3:            
                 try:
@@ -637,6 +667,7 @@ class FriedyBot:
         #command to add gametype to database (duel, 2v2tdm)
         #Usage: !addgametype <gametypetitle> <playercount> <teamcount> <statsname>
         #example: !addgametype 2v2v2ca 6 3 ca
+        logger.info("command_addgametype: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
         if isadmin:
             if len(argument) == 5 and argument[2].isdigit() and argument[3].isdigit():
                 try:
@@ -652,6 +683,7 @@ class FriedyBot:
 
     def command_removeserver(self, user, argument, chattype, isadmin):
         #command to remove server from database
+        logger.info("command_removeserver: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
         if isadmin:
             if len(argument) > 1:
                 resultText = ""
@@ -671,6 +703,7 @@ class FriedyBot:
     
     def command_removegametype(self, user, argument, chattype, isadmin):
         #command to remove gametype from database
+        logger.info("command_removegametype: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
         if isadmin:
             if len(argument) > 1:
                 resultText = ""
@@ -690,6 +723,7 @@ class FriedyBot:
     def command_help(self, user, argument, chattype, isadmin):
         #command for general overview of commands
         #or with arguments help for specific command
+        logger.info("command_help: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
         if isadmin:
             if len(argument) > 1 and self.cmdresults["cmds"][argument[1]] is not None:
                 self.send_notice(user, self.cmdresults["cmds"][argument[1]], chattype)
@@ -705,6 +739,7 @@ class FriedyBot:
         #command for marking users with xonotic flavour
         #example: !kill DrJaska
         #result: "DrJaska felt the electrifying air of Seek-y's Electro combo"
+        logger.info("command_kill: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
         killer = ""
         if chattype == "irc":
             killer = user
@@ -736,16 +771,21 @@ class FriedyBot:
 
     def command_bridge(self, user, argument, chattype, isadmin):
         #toggle on/off if specific user-messages should be bridged (future)
-        pass
+        logger.info("command_bridge: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
+        #TODO: implement bridge command
     
     def command_cupstart(self, user, argument, chattype, isadmin):
         #creates cup brackets and uploads to discord
-        #example: !cupstart seeky-cup Seek-y Grunt hotdog packer 
+        #example: !cupstart seeky-cup Seek-y Grunt hotdog packer
+        logger.info("command_cupstart: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
+ 
         cuppath = get_cuppicture(argument, self.settings["bot"]["browser"])
         self.discordconnect.send_my_file(cuppath)
         self.send_all("Generate Cup...")
 
     def command_online(self, user, argument, chattype, isadmin):
+        logger.info("command_online: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
+
         if chattype == "irc":
             self.ircconnect.send_my_message("Online are: " + ", ".join(self.discordconnect.get_online_members()))
         else:
@@ -764,6 +804,8 @@ class FriedyBot:
         self.send_notice(user, resultText, chattype)
         
     def command_subscribe(self, user, argument, chattype, isadmin):
+        logger.info("command_subscribe: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
+
         gametype_args = set(argument[1:])
         new_subscriptions = []
         player = None
@@ -796,7 +838,8 @@ class FriedyBot:
                 self.send_notice(user, "You are subscribed to: " + ", ".join([x.gametypeId.title for x in subscriptions]), chattype)
             self.command_pickups(user, argument, chattype, isadmin)
 
-    def command_unsubscribe(self, user, argument, chattype, isadmin):        
+    def command_unsubscribe(self, user, argument, chattype, isadmin):
+        logger.info("command_unsubscribe: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
         gametype_args = set(argument[1:])
         player = None
 
@@ -831,6 +874,7 @@ class FriedyBot:
             self.send_notice(user, "You are subscribed to nothing!", chattype)
 
     def command_promote(self, user, argument, chattype, isadmin):
+        logger.info("command_promote: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
         #TODO promote for more than one gametype and also for irc
         self.discordconnect.send_my_message_with_mention("Add to play game @player_" + argument[1])
 
