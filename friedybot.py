@@ -756,7 +756,7 @@ class FriedyBot:
         lastPickupGamePlayers = lastPickupGame.addedplayers
         resultText = lastPickupGame.gametypeId.title + ", played on " + lastPickupGame.createdDate.strftime("%Y-%m-%d") + " was played with: "
         for player in lastPickupGamePlayers:
-            if player.addedFrom == "irc":
+            if chattype == "irc":
                 resultText += player.playerId.ircName + " " + ("("+player.playerId.statsIRCName + ") " if player.playerId.statsIRCName is not None else "")
             else:
                 resultText += player.playerId.discordName + " " + ("("+player.playerId.statsDiscordName + ") " if player.playerId.statsDiscordName is not None else "")
