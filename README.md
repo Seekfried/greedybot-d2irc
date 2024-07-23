@@ -87,12 +87,17 @@ There are three other different setting files:
 
 ### Player commands
 - **!register**: Connect your account with your XonStats (stats.xonotic.org): !register \<xonstats-id>
+- **!pickups**: Shows all possible gametypes available for pickupgames: !pickups
 - **!add**: Add to all current pickup games or specific games: !add \[gametype]
 - **!renew**: Renew pickup games
 - **!remove**: Remove from all pickup games or specific games: !remove \[\<gametype>]
 - **!server**: Show all available Xonotic servers or specific server and their IP: !server \<servername>
 - **!who**: List all current pickup games with players
 - **!online**: List all current online discord-members for irc-users and vice versa
+- **!subscribe**: Add to subscription to a specific gametype to get notified in !promote command: !subscribe \[\<gametype>]
+- **!unsubscribe**: Remove from all gametype subscriptions or specific gametype subscription: !unsubscribe \[\<gametype>]
+- **!promote**: Notify all players to gametype specific pickupgame: !promote \[\<gametype>]
+- **!lastgame**: Show the last played pickupgame with date and players: !lastgame
 - **!kill**: Command for marking users with xonotic flavour (*see xonotic.json for more*)
 - **!bridge**: Switch bridge functionality on or off (for yourself)
 
