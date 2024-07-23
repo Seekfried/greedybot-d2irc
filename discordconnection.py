@@ -50,13 +50,15 @@ class DiscordConnector:
         global client
         asyncio.run_coroutine_threadsafe(send_my_file_async(path), client.loop)
 
-    def give_role(self, user, gametype):
+    def give_role(self, username, gametype):
         global client
+        user = discord.utils.get(channel.guild.members, name=username)
         rolename = "player_" + gametype
         asyncio.run_coroutine_threadsafe(give_role_async(user, rolename), client.loop)        
 
-    def take_role(self, user, gametype):
+    def take_role(self, username, gametype):
         global client
+        user = discord.utils.get(channel.guild.members, name=username)
         rolename = "player_" + gametype
         asyncio.run_coroutine_threadsafe(take_role_async(user, rolename), client.loop)  
 

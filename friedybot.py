@@ -827,8 +827,8 @@ class FriedyBot:
                     new_subscriptions.append(gametype.title)
                     playersub = Subscriptions(playerId=player,gametypeId=gametype)
                     playersub.save()
-                    if chattype == "discord":
-                        self.discordconnect.give_role(user, gametype.title)
+                    if player.discordName:
+                        self.discordconnect.give_role(player.discordName, gametype.title)
                 else:
                     self.send_notice(user,"You can't subscribe to: " + gametype_entry, chattype)
             if not new_subscriptions:
@@ -858,15 +858,15 @@ class FriedyBot:
                 sub_entry = subscriptions.select().join(GameTypes).where(GameTypes.title == gametype_entry).first()
                 if sub_entry:
                     sub_entry.delete_instance()
-                    if chattype == "discord":
-                        self.discordconnect.take_role(user, gametype_entry)
-                        pass                 
-                    #take discord role here
+                    if player.discordName:
+                        self.discordconnect.take_role(player.discordName, gametype_entry)
                 else:
                     self.send_notice(user, "You are not subscribed to: " + gametype_entry, chattype)
         else:
-            #TODO take all pickup discord roles here
-            subscriptions.delete().execute()
+            if player.discordName:
+                for sub_entry in subscriptions:
+                    sub_entry.delete_instance()
+                    self.discordconnect.take_role(player.discordName,sub_entry.gametypeId.title)
 
         subscriptions = self.__get_player_subscriptions(player)
 
