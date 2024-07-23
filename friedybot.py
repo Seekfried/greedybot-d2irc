@@ -751,6 +751,18 @@ class FriedyBot:
         else:
             self.discordconnect.send_my_message("Online are: " + ", ".join(self.ircconnect.channels[self.settings["irc"]["channel"]]._users.keys()))
 
+    def command_lastgame(self, user, argument, chattype, isadmin):
+        lastPickupGame = PickupGames.select().where(PickupGames.isPlayed == True).order_by(PickupGames.createdDate.desc()).first()
+        lastPickupGamePlayers = lastPickupGame.addedplayers
+        resultText = lastPickupGame.gametypeId.title + ", played on " + lastPickupGame.createdDate.strftime("%Y-%m-%d") + " was played with: "
+        for player in lastPickupGamePlayers:
+            if chattype == "irc":
+                resultText += player.playerId.ircName + " " + ("("+player.playerId.statsIRCName + ") " if player.playerId.statsIRCName is not None else "")
+            else:
+                resultText += player.playerId.discordName + " " + ("("+player.playerId.statsDiscordName + ") " if player.playerId.statsDiscordName is not None else "")
+                
+        self.send_notice(user, resultText, chattype)
+        
     def command_subscribe(self, user, argument, chattype, isadmin):
         gametype_args = set(argument[1:])
         new_subscriptions = []
@@ -821,3 +833,4 @@ class FriedyBot:
     def command_promote(self, user, argument, chattype, isadmin):
         #TODO promote for more than one gametype and also for irc
         self.discordconnect.send_my_message_with_mention("Add to play game @player_" + argument[1])
+
