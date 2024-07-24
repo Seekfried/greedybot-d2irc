@@ -50,6 +50,68 @@ class FriedyBot:
         if player:
             return Subscriptions.select().where(Subscriptions.playerId == player)
         return None
+    
+    def __create_teams(self, players, teamcount, xongametype):
+        logger.info("found_match: players=%s, teamcount=%s, xongametype=%s", players, teamcount, xongametype)
+        matchtext = {"irc":[],"discord":[]}
+        teams = [[] for _ in range(teamcount)]
+        total_elo = [0] * teamcount
+        players_with_elo = []
+
+        for player_entry in players:
+            if player_entry.playerId.statsId:
+                players_with_elo.append({"player": player_entry, "elo": self.get_gamestats(player_entry.playerId.statsId, xongametype)})
+            else:
+                players_with_elo.append({"player": player_entry, "elo": 0})
+
+        # Sort players by elo rating in descending order
+        players_with_elo.sort(key=lambda x: x['elo'], reverse=True)
+
+        # Distribute players to teams
+        for player in players_with_elo:
+            # Assign the player to the team with the least total elo
+            team_index = total_elo.index(min(total_elo))
+            teams[team_index].append(player)
+            total_elo[team_index] += player['elo']
+    
+        # Prepare the results with team information
+        team_info = []
+
+        for team in teams:
+            if team:
+                captain = max(team, key=lambda x: x['elo'])
+                average_elo = sum(player['elo'] for player in team) / len(team)
+                team_info.append({
+                    'team': team,
+                    'captain': captain,
+                    'average_elo': average_elo
+                })     
+
+        # Format the Teamresult for irc and discord
+        captains_discord = "Captains are: "
+        captains_irc = "Captains are: "
+        for index, team in enumerate(team_info, start=1):
+            irc_entry = f"Team {index}: "
+            discord_entry = f"Team {index}: "
+            captain = team['captain']
+            for team_member in team['team']:
+                if team_member['player'].addedFrom == "irc":
+                    discord_entry += team_member['player'].playerId.ircName + " (" + team_member['player'].playerId.statsName + ") "
+                    irc_entry += team_member['player'].playerId.ircName + " (" + team_member['player'].playerId.statsIRCName + ") "
+                else:
+                    discord_entry += team_member['player'].playerId.discordMention + " (" + team_member['player'].playerId.statsName + ") "
+                    irc_entry += team_member['player'].playerId.discordName + " (" + team_member['player'].playerId.statsIRCName + ") "
+
+            captains_discord += f"{captain['player'].playerId.statsDiscordName} ({captain['elo']:.2f}) "
+            discord_entry += f"Average Elo: {team['average_elo']:.2f} "
+            captains_irc += f"{captain['player'].playerId.statsIRCName} ({captain['elo']:.2f}) "
+            irc_entry += f"Average Elo: {team['average_elo']:.2f} "
+            matchtext["irc"].append(irc_entry)
+            matchtext["discord"].append(discord_entry)
+        
+        matchtext["irc"].append(captains_irc)
+        matchtext["discord"].append(captains_discord)
+        return matchtext
 
     # this was basically taken from rcon2irc.pl
     def __rgb_to_simple(self, r: int, g: int,b: int) -> int:
@@ -253,7 +315,7 @@ class FriedyBot:
         #get xonstat player names
         header =  {'Accept': 'application/json'}
         response = requests.get("https://stats.xonotic.org/player/" + str(id), headers=header)
-        logger.info("get_statsnames: response.status.code=%s", response.status.code)
+        logger.info("get_statsnames: response.status_code=%s", response.status_code)
         player = response.json()
         if response.status_code == 200:
             return player["player"]["nick"],player["player"]["stripped_nick"]
@@ -266,7 +328,7 @@ class FriedyBot:
         elo = 0
         header =  {'Accept': 'application/json'}
         response = requests.get("https://stats.xonotic.org/player/" + str(id)+ "/skill?game_type_cd=" + gtype, headers=header)
-        logger.info("get_gamestats: response.status.code=%s", response.status.code)
+        logger.info("get_gamestats: response.status_code=%s", response.status_code)
         player = response.json()
         if response.status_code == 200:
             if len(player):
@@ -284,16 +346,23 @@ class FriedyBot:
         if pugplayers.count() == puggame.gametypeId.playerCount:
             puggame.isPlayed = True
             puggame.save()
-            ircmatchtext = puggame.gametypeId.title + " ready! Players are: "
-            matchtext = puggame.gametypeId.title + " ready! Players are: "
-            for pugplayer in pugplayers:
-                if pugplayer.addedFrom == "irc":
-                    matchtext += pugplayer.playerId.ircName + " (" + pugplayer.playerId.statsDiscordName + ") "
-                    ircmatchtext += pugplayer.playerId.ircName + " (" + pugplayer.playerId.statsIRCName + ") "
-                else:
-                    matchtext += pugplayer.playerId.discordMention + " (" + pugplayer.playerId.statsDiscordName + ") "
-                    ircmatchtext += pugplayer.playerId.discordName + " (" + pugplayer.playerId.statsIRCName + ") "
-            self.send_all(matchtext, ircmatchtext)
+            if puggame.gametypeId.playerCount == puggame.gametypeId.teamCount or puggame.gametypeId.statsName is None:
+                ircmatchtext = puggame.gametypeId.title + " ready! Players are: "
+                matchtext = puggame.gametypeId.title + " ready! Players are: "
+                for pugplayer in pugplayers:
+                    if pugplayer.addedFrom == "irc":
+                        matchtext += pugplayer.playerId.ircName + " (" + pugplayer.playerId.statsDiscordName + ") "
+                        ircmatchtext += pugplayer.playerId.ircName + " (" + pugplayer.playerId.statsIRCName + ") "
+                    else:
+                        matchtext += pugplayer.playerId.discordMention + " (" + pugplayer.playerId.statsDiscordName + ") "
+                        ircmatchtext += pugplayer.playerId.discordName + " (" + pugplayer.playerId.statsIRCName + ") "
+                self.send_all(matchtext, ircmatchtext)
+            else:
+                team_result = self.__create_teams(pugplayers, puggame.gametypeId.teamCount, puggame.gametypeId.statsName)
+                
+                self.send_all(puggame.gametypeId.title + " ready! Players are: ", puggame.gametypeId.title + " ready! Players are: ")
+                for i in range(0,len(team_result["irc"])):
+                    self.send_all(team_result["discord"][i], team_result["irc"][i])
 
     def set_irc_topic(self):
         #sets the current pickups as irc topic
