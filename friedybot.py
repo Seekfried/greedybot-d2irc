@@ -358,9 +358,9 @@ class FriedyBot:
                         ircmatchtext += pugplayer.playerId.discordName + " (" + pugplayer.playerId.statsIRCName + ") "
                 self.send_all(matchtext, ircmatchtext)
             else:
-                team_result = self.__create_teams(pugplayers, puggame.gametypeId.teamCount, puggame.gametypeId.statsName)
-                
                 self.send_all(puggame.gametypeId.title + " ready! Players are: ", puggame.gametypeId.title + " ready! Players are: ")
+
+                team_result = self.__create_teams(pugplayers, puggame.gametypeId.teamCount, puggame.gametypeId.statsName)
                 for i in range(0,len(team_result["irc"])):
                     self.send_all(team_result["discord"][i], team_result["irc"][i])
 
