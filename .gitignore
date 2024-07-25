@@ -11,6 +11,8 @@ __pycache__/
 
 #SQLite
 pickups.db
+pickups.db-shm
+pickups.db-wal
 
 #bracket results
 bracket/results/*

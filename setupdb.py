@@ -7,8 +7,7 @@ def createDatabase():
     db.create_tables([Players, GameTypes, Servers, PickupGames, PickupEntries, Subscriptions])
     db.close()
 
-def createGameTypes():
-    
+def createGameTypes():    
     db.connect()
     try:
         f = open("gametypes.json", encoding="utf-8")
@@ -21,11 +20,14 @@ def createGameTypes():
     db.close()
 
 def deleteGameTypes():
+    db.connect()
     GameTypes.delete().execute()
+    db.close()
 
 def deletePickups():
+    db.connect()
     PickupGames.delete().execute()
-    pass
+    db.close()
 
 def main():
     parser = argparse.ArgumentParser(description="Commands for the pickup-database:")

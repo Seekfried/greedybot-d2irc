@@ -11,6 +11,7 @@ from datetime import datetime
 import time
 from ircconnection import IrcConnector
 from discordconnection import DiscordConnector
+from playhouse.sqliteq import SqliteQueueDatabase
 
 logger = logging.getLogger("friedybot")
 
@@ -25,11 +26,14 @@ class FriedyBot:
         self.discordconnect = None
         self.thread_lock = None
         self.topic = ""
-
+        global db
+        db = SqliteQueueDatabase('pickups.db', pragmas={'foreign_keys': 1},autostart=False, queue_max_size=64, results_timeout=5.0)
+        db.start()
         db.connect()
         queryset = PickupGames.delete().where(PickupGames.isPlayed == False)
         queryset.execute()
         db.close()
+        db.stop()
 
     def __get_player(self, user, chattype) -> Players:
         player = None
@@ -95,6 +99,7 @@ class FriedyBot:
             discord_entry = f"Team {index}: "
             captain = team['captain']
             for team_member in team['team']:
+                #self.__withdraw_player_from_all(team_member['player'].playerId)
                 if team_member['player'].addedFrom == "irc":
                     discord_entry += team_member['player'].playerId.ircName + " (" + team_member['player'].playerId.statsName + ") "
                     irc_entry += team_member['player'].playerId.ircName + " (" + team_member['player'].playerId.statsIRCName + ") "
@@ -311,8 +316,8 @@ class FriedyBot:
                 return
 
     def get_statsnames(self, id):
-        logger.info("get_statsnames: id=%s", id)
         #get xonstat player names
+        logger.info("get_statsnames: id=%s", id)
         header =  {'Accept': 'application/json'}
         response = requests.get("https://stats.xonotic.org/player/" + str(id), headers=header)
         logger.info("get_statsnames: response.status_code=%s", response.status_code)
@@ -323,7 +328,8 @@ class FriedyBot:
             logger.error("Error in get_statsnames. Status code: ", response.status_code)
             return None
 
-    def get_gamestats(self, id, gtype):
+    def get_gamestats(self, id, gtype):        
+        #get xonstat player elo for specific gametype
         logger.info("get_gamestats: id=%s, gtype=%s", id, gtype)
         elo = 0
         header =  {'Accept': 'application/json'}
@@ -350,6 +356,7 @@ class FriedyBot:
                 ircmatchtext = puggame.gametypeId.title + " ready! Players are: "
                 matchtext = puggame.gametypeId.title + " ready! Players are: "
                 for pugplayer in pugplayers:
+                    #self.__withdraw_player_from_all(pugplayer.playerId)
                     if pugplayer.addedFrom == "irc":
                         matchtext += pugplayer.playerId.ircName + " (" + pugplayer.playerId.statsDiscordName + ") "
                         ircmatchtext += pugplayer.playerId.ircName + " (" + pugplayer.playerId.statsIRCName + ") "
@@ -382,6 +389,7 @@ class FriedyBot:
         method_name = 'command_' + str(argument[0][1:].lower())
         method = getattr(self, method_name, self.wrong_command)
         with self.thread_lock:
+            db.start()
             db.connect()
             try:
                 method(user, argument, chattype, isadmin)
@@ -389,6 +397,7 @@ class FriedyBot:
                 self.send_notice(user, "Sorry, something went wrong", chattype)
                 logger.error("Error in command:", e)
             db.close()
+            db.stop()
 
     def send_notice(self, user, message, chattype):
         #sends message to only discord or to specific irc-user (for future: send direct message to discord-user)
@@ -416,12 +425,14 @@ class FriedyBot:
         #changes irc-name of users in case of nickname changes
         logger.info("change_name: oldnick=%s, newnick=%s", oldnick, newnick)
         with self.thread_lock:
+            db.start()
             db.connect()
             pl = Players.select().where(Players.ircName == oldnick).first()
             if pl is not None:
                 pl.ircName = newnick
                 pl.save()
             db.close()
+            db.stop()
 
     def remove_user_on_exit(self, user,chattype):
         #removes user from all pickups in case of disconnect
@@ -429,6 +440,7 @@ class FriedyBot:
         gameentries = None
         player = None
         with self.thread_lock:
+            db.start()
             db.connect()
             try:                
                 #check where user removed from
@@ -444,7 +456,8 @@ class FriedyBot:
                         self.build_pickuptext()
             except Exception as e:
                 logger.error("Error in remove_user_on_exit: ", e)
-            db.close()
+            db.close()            
+            db.stop()
 
 
     def build_pickuptext(self):
@@ -490,11 +503,11 @@ class FriedyBot:
                 if chattype == "irc":
                     pl = Players.select().where(Players.statsId == argument[1]).first()
                     if pl is None:
-                        pl, plcreated = Players.get_or_create(ircName=user)
-                        pl.statsId = argument[1]
-                        pl.statsName = xonstatsname
-                        pl.statsIRCName = self.__irc_colors(xonstatscoloredname)
-                        pl.statsDiscordName = self.__discord_colors(xonstatscoloredname)
+                        pl = Players(ircName=user, 
+                                     statsId=argument[1], 
+                                     statsName=xonstatsname, 
+                                     statsIRCName=self.__irc_colors(xonstatscoloredname), 
+                                     statsDiscordName=self.__discord_colors(xonstatscoloredname))
                         pl.save()
                     else:
                         pl.ircName = user
@@ -505,12 +518,12 @@ class FriedyBot:
                 else:
                     pl = Players.select().where(Players.statsId == argument[1]).first()
                     if pl is None:
-                        pl, plcreated = Players.get_or_create(discordName=user.name)
-                        pl.discordMention = user.mention
-                        pl.statsId = argument[1]
-                        pl.statsName = xonstatsname
-                        pl.statsIRCName = self.__irc_colors(xonstatscoloredname)
-                        pl.statsDiscordName = self.__discord_colors(xonstatscoloredname)
+                        pl = Players(discordName=user.name, 
+                                     discordMention=user.mention, 
+                                     statsId=argument[1], 
+                                     statsName=xonstatsname, 
+                                     statsIRCName=self.__irc_colors(xonstatscoloredname), 
+                                     statsDiscordName=self.__discord_colors(xonstatscoloredname))
                         pl.save()
                     else:
                         pl.discordName = user.name
@@ -520,9 +533,11 @@ class FriedyBot:
                         pl.statsDiscordName = self.__discord_colors(xonstatscoloredname)
                         pl.save()                
                 if chattype == "irc":
-                    self.send_all(self.cmdresults["misc"]["registsuccess"].format(user,argument[1],pl.statsDiscordName), self.cmdresults["misc"]["registsuccess"].format(user,argument[1],pl.statsIRCName))
+                    self.send_all(self.cmdresults["misc"]["registsuccess"].format(user,argument[1],pl.statsDiscordName), 
+                                  self.cmdresults["misc"]["registsuccess"].format(user,argument[1],pl.statsIRCName))
                 else:
-                    self.send_all(self.cmdresults["misc"]["registsuccess"].format(user.name,argument[1],pl.statsDiscordName), self.cmdresults["misc"]["registsuccess"].format(user.name,argument[1],pl.statsIRCName))
+                    self.send_all(self.cmdresults["misc"]["registsuccess"].format(user.name,argument[1],pl.statsDiscordName), 
+                                  self.cmdresults["misc"]["registsuccess"].format(user.name,argument[1],pl.statsIRCName))
             except Exception as e:
                 logger.error("Error in command_register: ", e, "Reason: ", e.args)
                 self.send_notice(user, "Problem with XonStats", chattype)
@@ -536,9 +551,15 @@ class FriedyBot:
 
         #check where user added from
         if chattype == "irc":
-            pl, plcreated = Players.get_or_create(ircName=user)
+            pl = Players.select().where(Players.ircName == user).first()
+            if pl is None:
+                pl = Players(ircname=user)
+                pl.save()
         else:
-            pl, plcreated = Players.get_or_create(discordName=user.name, discordMention=user.mention)
+            pl = Players.select().where(Players.discordName == user.name, Players.discordMention == user.mention)
+            if pl is None:
+                pl = Players(discordName=user.name, discordMention=user.mention)                
+                pl.save()
             
         #!add without gametype
         if len(argument) == 1:
@@ -569,7 +590,10 @@ class FriedyBot:
             for gtypeentries in argument[1:]:
                 gtype = GameTypes.select().where(GameTypes.title == gtypeentries).first()
                 if gtype is not None:     
-                    game, gamcreated = PickupGames.get_or_create(gametypeId=gtype.id, isPlayed=False)
+                    game = PickupGames.select().where(PickupGames.gametypeId == gtype.id, PickupGames.isPlayed == False).first()
+                    if game is None:
+                        game = PickupGames(gametypeId=gtype.id, isPlayed=False)
+                        game.save()
                     pickentry = PickupEntries.select().where(PickupEntries.playerId == pl.id, PickupEntries.gameId == game.id).first()
                     if pickentry is None:
                         pickentry = PickupEntries(playerId=pl.id, gameId=game.id, addedFrom=chattype)
