@@ -716,10 +716,12 @@ class FriedyBot:
         if isadmin:
             if len(argument) == 3:            
                 try:
-                    ip = argument[2].split(":")[0]
+                    sanitized_ip_and_port: str = argument[2].replace('[','').replace(']','')
+                    ip = ":".join(sanitized_ip_and_port.split(":")[:-1])
+                    logger.info("command_addserver: ip=%s", ip)
                     ip_address(ip)
                     try:
-                        serv = Servers(serverName=argument[1],serverIp=argument[2])
+                        serv = Servers(serverName=argument[1],serverIp=sanitized_ip_and_port)
                         serv.save()
                     except:
                         self.send_notice(user, "Server already registered!", chattype)
