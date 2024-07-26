@@ -717,7 +717,8 @@ class FriedyBot:
             if len(argument) == 3:            
                 try:
                     sanitized_ip_and_port: str = argument[2].replace('[','').replace(']','')
-                    ip = sanitized_ip_and_port.split(":")[:-1]
+                    ip = ":".join(sanitized_ip_and_port.split(":")[:-1])
+                    logger.info("command_addserver: ip=%s", ip)
                     ip_address(ip)
                     try:
                         serv = Servers(serverName=argument[1],serverIp=sanitized_ip_and_port)
