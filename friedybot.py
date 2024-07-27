@@ -28,21 +28,6 @@ class FriedyBot:
         self.topic = ""
         self.dbconnect = DatabaseConnector()
 
-    # def __get_player(self, user, chattype) -> Players:
-    #     player = None
-
-    #     if chattype == "irc":
-    #         player = Players.select().where(Players.ircName == user).first()
-    #     else:
-    #         player = Players.select().where(Players.discordName == user.name).first()
-        
-    #     return player
-    
-    # def __get_player_subscriptions(self, player) -> Subscriptions:
-    #     if player:
-    #         return Subscriptions.select().where(Subscriptions.playerId == player)
-    #     return None
-
     def run(self):
         self.thread_lock = threading.Lock()
         self.ircconnect = IrcConnector(self.settings["irc"], self.thread_lock, self)
@@ -447,75 +432,66 @@ class FriedyBot:
         result = self.dbconnect.get_lastgame(chattype)       
         self.send_notice(user, result, chattype)
         
-    # def command_subscribe(self, user, argument, chattype, isadmin):
-    #     logger.info("command_subscribe: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
-
-    #     gametype_args = set(argument[1:])
-    #     new_subscriptions = []
-    #     player = None
+    def command_subscribe(self, user, argument, chattype, isadmin):
+        logger.info("command_subscribe: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
+        result: bool = False
+        message: str = ""
+        discord_name: str = ""
+        gametype_args = set(argument[1:])
+        new_subscriptions = []
         
-    #     player = self.__get_player(user, chattype)
+        if gametype_args:
+            for gametype_entry in gametype_args:
+                result, message, discord_name = self.dbconnect.add_subscription(user, gametype_entry, chattype)
 
-    #     if not player:
-    #         self.send_notice(user, "You need to register first (!register) to subscribe!", chattype)
-    #         return
-        
-    #     subscriptions = self.__get_player_subscriptions(player)
+                if result:
+                    new_subscriptions.append(gametype_entry)
+                    if discord_name:
+                        self.discordconnect.give_role(discord_name, gametype_entry)
+                else:
+                    self.send_notice(user, message, chattype)
+            if not new_subscriptions:
+                self.command_pickups(user, argument, chattype, isadmin)
+            else:
+                self.send_notice(user, "You are now subscribed to: " + ", ".join(new_subscriptions), chattype)
+        else:
+            subscriptions = self.dbconnect.get_subscriptions(user, chattype)
+            if subscriptions:                
+                self.send_notice(user, "You are subscribed to: " + ", ".join([x for x in subscriptions]), chattype)
+            else:
+                self.command_pickups(user, argument, chattype, isadmin)
 
-    #     if gametype_args:
-    #         for gametype_entry in gametype_args:
-    #             gametype = GameTypes.select().where(GameTypes.title == gametype_entry).first()
-    #             if gametype and (not subscriptions or not subscriptions.where(Subscriptions.gametypeId == gametype).exists()):
-    #                 new_subscriptions.append(gametype.title)
-    #                 playersub = Subscriptions(playerId=player,gametypeId=gametype)
-    #                 playersub.save()
-    #                 if player.discordName:
-    #                     self.discordconnect.give_role(player.discordName, gametype.title)
-    #             else:
-    #                 self.send_notice(user,"You can't subscribe to: " + gametype_entry, chattype)
-    #         if not new_subscriptions:
-    #             self.command_pickups(user, argument, chattype, isadmin)
-    #         else:
-    #             self.send_notice(user, "You are now subscribed to: " + ", ".join(new_subscriptions), chattype)
-    #     else:
-    #         if subscriptions:                
-    #             self.send_notice(user, "You are subscribed to: " + ", ".join([x.gametypeId.title for x in subscriptions]), chattype)
-    #         self.command_pickups(user, argument, chattype, isadmin)
+    def command_unsubscribe(self, user, argument, chattype, isadmin):
+        logger.info("command_unsubscribe: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
+        gametype_args = set(argument[1:])
+        message: str = ""
+        discord_name: str = ""
 
-    # def command_unsubscribe(self, user, argument, chattype, isadmin):
-        # logger.info("command_unsubscribe: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
-        # gametype_args = set(argument[1:])
-        # player = None
+        if gametype_args:
+            for gametype_entry in gametype_args:
+                message, discord_name = self.dbconnect.delete_subscription(user, gametype_entry, chattype)
+                if message:
+                    self.send_notice(user, message, chattype)
+                else:
+                    if discord_name:
+                        self.discordconnect.take_role(discord_name, gametype_entry)
+                
+        else:            
+            subscriptions = self.dbconnect.get_subscriptions(user, chattype)
+            for gametype_entry in subscriptions:
+                message, discord_name = self.dbconnect.delete_subscription(user, gametype_entry, chattype)
+                if message:                    
+                    self.send_notice(user, message, chattype)                    
+                else:
+                    if discord_name:
+                        self.discordconnect.take_role(discord_name, gametype_entry)
 
-        # player = self.__get_player(user, chattype)
+        subscriptions = self.dbconnect.get_subscriptions(user, chattype)
 
-        # if not player:
-        #     self.send_notice(user, "You need to register first (!register) to subscribe/unsubscribe!", chattype)
-        #     return
-        
-        # subscriptions = self.__get_player_subscriptions(player)
-
-        # if gametype_args:
-        #     for gametype_entry in gametype_args:
-        #         sub_entry = subscriptions.select().join(GameTypes).where(GameTypes.title == gametype_entry).first()
-        #         if sub_entry:
-        #             sub_entry.delete_instance()
-        #             if player.discordName:
-        #                 self.discordconnect.take_role(player.discordName, gametype_entry)
-        #         else:
-        #             self.send_notice(user, "You are not subscribed to: " + gametype_entry, chattype)
-        # else:
-        #     if player.discordName:
-        #         for sub_entry in subscriptions:
-        #             sub_entry.delete_instance()
-        #             self.discordconnect.take_role(player.discordName,sub_entry.gametypeId.title)
-
-        # subscriptions = self.__get_player_subscriptions(player)
-
-        # if subscriptions:
-        #     self.send_notice(user, "You are subscribed to: " + ", ".join([x.gametypeId.title for x in subscriptions]), chattype)
-        # else:
-        #     self.send_notice(user, "You are subscribed to nothing!", chattype)
+        if subscriptions:
+            self.send_notice(user, "You are subscribed to: " + ", ".join([x for x in subscriptions]), chattype)
+        else:
+            self.send_notice(user, "You are subscribed to nothing!", chattype)
 
     def command_promote(self, user, argument, chattype, isadmin):
         logger.info("command_promote: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)

@@ -250,6 +250,29 @@ class DatabaseConnector:
 
         db.close()             
         return message
+    
+    def add_subscription(self, user, gametypetitle, chattype) -> str:
+        discord_name: str = ""
+        message: str = ""
+        result: bool = False
+
+        db.connect()
+        player = self.__get_player(user, chattype)
+        if not player:
+            message = "You need to register first (!register) to subscribe!"
+        else:        
+            subscriptions = self.__get_player_subscriptions(player)
+            gametype = GameTypes.select().where(GameTypes.title == gametypetitle).first()
+            if gametype and (not subscriptions or not subscriptions.where(Subscriptions.gametypeId == gametype).exists()):
+                result = True
+                playersub = Subscriptions(playerId=player,gametypeId=gametype)
+                playersub.save()
+                if player.discordName:
+                    discord_name = player.discordName
+            else:
+                message = "You can't subscribe to: " + gametypetitle
+        db.close()
+        return result, message, discord_name
 
     def delete_active_games(self):
         #Delete pickgames that were not played
@@ -302,7 +325,25 @@ class DatabaseConnector:
         db.close()    
         return messages
 
-    
+    def delete_subscription(self, user, gametypetitle, chattype) -> list[str]:
+        discord_name: str = ""
+        message: str = ""
+
+        db.connect()
+        player = self.__get_player(user, chattype)
+        if not player:
+            message = "You need to register first (!register) to subscribe!"
+        sub_entry = Subscriptions.select().join(GameTypes).where(GameTypes.title == gametypetitle, Subscriptions.playerId == player).first()
+        if sub_entry:
+            sub_entry.delete_instance()
+            if player.discordName:
+                discord_name = player.discordName
+        else:
+            message = "You are not subscribed to: " + gametypetitle
+
+        db.close()
+        return message, discord_name
+
     def get_gametype_list(self) -> List[str]:
         #Get a list of strings of all possible gametypes
         result = []
@@ -384,6 +425,16 @@ class DatabaseConnector:
 
         db.close()
         return wrong_server, result
+    
+    def get_subscriptions(self, user, chattype) -> list[str]:
+        subs: list[str] = []
+        db.connect()
+        player = self.__get_player(user, chattype)
+        if player:
+            for subscription in Subscriptions.select().where(Subscriptions.playerId == player):
+                subs.append(subscription.gametypeId.title)
+        db.close()
+        return subs
     
     def has_active_games(self) -> bool:
         result: bool = False
