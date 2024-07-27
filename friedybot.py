@@ -1,5 +1,5 @@
 from unittest import result
-from model import *
+#from model import *
 from bracket.bracketcreator import get_cuppicture
 from ipaddress import ip_address
 import threading
@@ -11,6 +11,7 @@ from datetime import datetime
 import time
 from ircconnection import IrcConnector
 from discordconnection import DiscordConnector
+from dbconnection import DatabaseConnector
 
 logger = logging.getLogger("friedybot")
 
@@ -25,238 +26,7 @@ class FriedyBot:
         self.discordconnect = None
         self.thread_lock = None
         self.topic = ""
-
-        db.connect()
-        queryset = PickupGames.delete().where(PickupGames.isPlayed == False)
-        queryset.execute()
-        db.close()
-
-    def __get_player(self, user, chattype) -> Players:
-        player = None
-
-        if chattype == "irc":
-            player = Players.select().where(Players.ircName == user).first()
-        else:
-            player = Players.select().where(Players.discordName == user.name).first()
-        
-        return player
-
-    def __get_active_player_entries(self, player) -> PickupEntries:
-        if player is not None:
-            return PickupEntries.select().join(PickupGames).where(PickupGames.isPlayed == False).where(PickupEntries.playerId == player)
-        return None
-    
-    def __get_player_subscriptions(self, player) -> Subscriptions:
-        if player:
-            return Subscriptions.select().where(Subscriptions.playerId == player)
-        return None
-    
-    def __create_teams(self, players, teamcount, xongametype):
-        logger.info("found_match: players=%s, teamcount=%s, xongametype=%s", players, teamcount, xongametype)
-        matchtext = {"irc":[],"discord":[]}
-        teams = [[] for _ in range(teamcount)]
-        total_elo = [0] * teamcount
-        players_with_elo = []
-
-        for player_entry in players:
-            if player_entry.playerId.statsId:
-                players_with_elo.append({"player": player_entry, "elo": self.get_gamestats(player_entry.playerId.statsId, xongametype)})
-            else:
-                players_with_elo.append({"player": player_entry, "elo": 0})
-
-        # Sort players by elo rating in descending order
-        players_with_elo.sort(key=lambda x: x['elo'], reverse=True)
-
-        # Distribute players to teams
-        for player in players_with_elo:
-            # Assign the player to the team with the least total elo
-            team_index = total_elo.index(min(total_elo))
-            teams[team_index].append(player)
-            total_elo[team_index] += player['elo']
-    
-        # Prepare the results with team information
-        team_info = []
-
-        for team in teams:
-            if team:
-                captain = max(team, key=lambda x: x['elo'])
-                average_elo = sum(player['elo'] for player in team) / len(team)
-                team_info.append({
-                    'team': team,
-                    'captain': captain,
-                    'average_elo': average_elo
-                })     
-
-        # Format the Teamresult for irc and discord
-        captains_discord = "Captains are: "
-        captains_irc = "Captains are: "
-        for index, team in enumerate(team_info, start=1):
-            irc_entry = f"Team {index}: "
-            discord_entry = f"Team {index}: "
-            captain = team['captain']
-            for team_member in team['team']:
-                if team_member['player'].addedFrom == "irc":
-                    discord_entry += team_member['player'].playerId.ircName + " (" + team_member['player'].playerId.statsName + ") "
-                    irc_entry += team_member['player'].playerId.ircName + " (" + team_member['player'].playerId.statsIRCName + ") "
-                else:
-                    discord_entry += team_member['player'].playerId.discordMention + " (" + team_member['player'].playerId.statsName + ") "
-                    irc_entry += team_member['player'].playerId.discordName + " (" + team_member['player'].playerId.statsIRCName + ") "
-
-            captains_discord += f"{captain['player'].playerId.statsDiscordName} ({captain['elo']:.2f}) "
-            discord_entry += f"Average Elo: {team['average_elo']:.2f} "
-            captains_irc += f"{captain['player'].playerId.statsIRCName} ({captain['elo']:.2f}) "
-            irc_entry += f"Average Elo: {team['average_elo']:.2f} "
-            matchtext["irc"].append(irc_entry)
-            matchtext["discord"].append(discord_entry)
-        
-        matchtext["irc"].append(captains_irc)
-        matchtext["discord"].append(captains_discord)
-        return matchtext
-
-    # this was basically taken from rcon2irc.pl
-    def __rgb_to_simple(self, r: int, g: int,b: int) -> int:
-
-        min_ = min(r,g,b)
-        max_ = max(r,g,b)
-
-        v = max_ / 15.0
-        s = (1 - min_/max_) if max_ != min_  else 0
-        h = 0
-        if s < 0.2:
-            return 0 if v < 0.5 else 7
-
-        if max_ == min_:
-            h = 0
-        elif max_ == r:
-            h = (60 * (g - b) / (max_ - min_)) % 360
-        elif max_ == g:
-            h = (60 * (b - r) / (max_ - min_)) + 120
-        elif max_ == b:
-            h = (60 * (r - g) / (max_ - min_)) + 240
-
-        color_thresholds =[(36,1), (80,3), (150,2),(200,5),(270,4),(330,6)]
-
-        for threshold, value in color_thresholds:
-            if h < threshold:
-                return value
-
-        return 1
-
-    # Discord colors
-    def __discord_colors(self, qstr: str) -> str:
-        _discord_colors = [ 0, 31, 32, 33, 34, 36, 35, 0, 0, 0 ]
-
-        _all_colors = re.compile(r'(\^\d|\^x[\dA-Fa-f]{3})')
-        #qstr = ''.join([ x if ord(x) < 128 else '' for x in qstr ]).replace('^^', '^').replace(u'\x00', '') # strip weird characters
-        parts = _all_colors.split(qstr)
-        result = "```ansi\n"
-        oldcolor = None
-        while len(parts) > 0:
-            tag = None
-            txt = parts[0]
-            if _all_colors.match(txt):
-                tag = txt[1:]  # strip leading '^'
-                if len(parts) < 2:
-                    break
-                txt = parts[1]
-                del parts[1]
-            del parts[0]
-
-            if not txt or len(txt) == 0:
-                # only colorcode and no real text, skip this
-                continue
-
-            color = 7
-            if tag:
-                if len(tag) == 4 and tag[0] == 'x':
-                    r = int(tag[1], 16)
-                    g = int(tag[2], 16)
-                    b = int(tag[3], 16)
-                    color = self.__rgb_to_simple(r,g,b)
-                elif len(tag) == 1 and int(tag[0]) in range(0,10):
-                    color = int(tag[0])
-            color = _discord_colors[color]
-            if color != oldcolor:
-                result += "\u001b[1;" + str(color) + "m"
-            result += txt
-            oldcolor = color
-        result += "\u001b[0m```"
-        return result
-
-    # Method taken from zykure's bot: https://gitlab.com/xonotic-zykure/multibot
-    def __irc_colors(self, qstr: str) -> str:
-        _irc_colors = [ -1, 4, 9, 8, 12, 11, 13, -1, -1, -1 ]
-
-        _all_colors = re.compile(r'(\^\d|\^x[\dA-Fa-f]{3})')
-        #qstr = ''.join([ x if ord(x) < 128 else '' for x in qstr ]).replace('^^', '^').replace(u'\x00', '') # strip weird characters
-        parts = _all_colors.split(qstr)
-        result = "\002"
-        oldcolor = None
-        while len(parts) > 0:
-            tag = None
-            txt = parts[0]
-            if _all_colors.match(txt):
-                tag = txt[1:]  # strip leading '^'
-                if len(parts) < 2:
-                    break
-                txt = parts[1]
-                del parts[1]
-            del parts[0]
-
-            if not txt or len(txt) == 0:
-                # only colorcode and no real text, skip this
-                continue
-
-            color = 7
-            if tag:
-                if len(tag) == 4 and tag[0] == 'x':
-                    r = int(tag[1], 16)
-                    g = int(tag[2], 16)
-                    b = int(tag[3], 16)
-                    color = self.__rgb_to_simple(r,g,b)
-                elif len(tag) == 1 and int(tag[0]) in range(0,10):
-                    color = int(tag[0])
-            color = _irc_colors[color]
-            if color != oldcolor:
-                if color < 0:
-                    result += "\017\002"
-                else:
-                    result += "\003" + "%02d" % color
-            result += txt
-            oldcolor = color
-        result += "\017"
-        return result
-    
-    def __withdraw_player_from_all(self, player) -> bool:
-        #check if player is already in database
-        if player is not None:
-            gameentries = self.__get_active_player_entries(player)
-
-        if player is None or not gameentries.exists():
-            return False
-        
-        for gameentry in gameentries:
-            gid = gameentry.gameId
-            gameentry.delete_instance()
-            game = PickupGames.select().where(PickupGames.id == gid).first()
-            if len(game.addedplayers) == 0:
-                game.delete_instance()
-        
-        return True
-        
-    def __withdraw_player_from_gametype(self, player, gametypeId) -> bool:
-        if player is None:
-            return False
-        
-        gtype = GameTypes.select().where(GameTypes.title == gametypeId).first()
-        if gtype is not None:     
-            games = PickupGames.select().where(PickupGames.gametypeId == gtype.id, PickupGames.isPlayed == False)
-            for game in games:
-                PickupEntries.delete().where(PickupEntries.playerId == player, PickupEntries.gameId == game.id).execute()
-                if len(game.addedplayers) == 0:
-                    game.delete_instance()
-                    
-        return True
+        self.dbconnect = DatabaseConnector()
 
     def run(self):
         self.thread_lock = threading.Lock()
@@ -276,93 +46,30 @@ class FriedyBot:
         deletetime = self.settings["bot"]["pugtimeout"]
         while True:
             mindiff = warntime
-            currenttime = datetime.now()
-            pugentries = PickupEntries.select().join(PickupGames).where(PickupGames.isPlayed == False).order_by(PickupEntries.addedDate.asc())
-            if pugentries.exists():
-                for pugentry in pugentries:
-                    pugdiff = round((currenttime - pugentry.addedDate).total_seconds())
-                    if pugdiff >= deletetime:
-                        gid = pugentry.gameId
-                        pugentry.delete_instance()
-                        game = PickupGames.select().where(PickupGames.id == gid).first()
-                        if len(game.addedplayers) == 0:
-                            game.delete_instance()
-                        self.build_pickuptext()
-                    elif pugdiff >= warntime:
-                        if mindiff > deletetime - pugdiff:
-                            mindiff = deletetime - pugdiff  
-                        if not pugentry.isWarned:
-                            pugentry.isWarned = True
-                            pugentry.save()
-                            if pugentry.addedFrom == "irc":
-                                self.send_notice(pugentry.playerId.ircName, self.cmdresults["misc"]["pugtimewarn"], "irc")
-                            else:
-                                self.send_notice(None, pugentry.playerId.discordMention +  " " + self.cmdresults["misc"]["pugtimewarn"], "discord")                                                             
+            currenttime = datetime.now()      
+            if self.dbconnect.has_active_games(): #pugentries.exists():
+
+                mindiff, has_break, has_new_text, warn_user = self.dbconnect.pugtimer_step(mindiff, currenttime, deletetime, warntime)
+                
+                #player was over the time and got remove from game
+                if has_new_text:
+                    self.build_pickuptext()
+
+                #player gets notified: "Your added games will expire in 20 minutes, type !renew to renew your games"
+                if warn_user:
+                    if warn_user["chattype"] == "irc":
+                        self.send_notice(warn_user["user"], self.cmdresults["misc"]["pugtimewarn"], warn_user["chattype"])
                     else:
-                        if mindiff > warntime - pugdiff:
-                            mindiff = warntime - pugdiff
-                        else:
-                            break
-                if not PickupGames.select().where(PickupGames.isPlayed == False).exists():
+                        self.send_notice(None, warn_user["user"] +  " " + self.cmdresults["misc"]["pugtimewarn"], warn_user["chattype"])
+
+                if has_break:
+                    break
+                if not self.dbconnect.has_active_games():
                     return
                 else:
                     time.sleep(mindiff)
             else:
                 return
-
-    def get_statsnames(self, id):
-        logger.info("get_statsnames: id=%s", id)
-        #get xonstat player names
-        header =  {'Accept': 'application/json'}
-        response = requests.get("https://stats.xonotic.org/player/" + str(id), headers=header)
-        logger.info("get_statsnames: response.status_code=%s", response.status_code)
-        player = response.json()
-        if response.status_code == 200:
-            return player["player"]["nick"],player["player"]["stripped_nick"]
-        else:
-            logger.error("Error in get_statsnames. Status code: ", response.status_code)
-            return None
-
-    def get_gamestats(self, id, gtype):
-        logger.info("get_gamestats: id=%s, gtype=%s", id, gtype)
-        elo = 0
-        header =  {'Accept': 'application/json'}
-        response = requests.get("https://stats.xonotic.org/player/" + str(id)+ "/skill?game_type_cd=" + gtype, headers=header)
-        logger.info("get_gamestats: response.status_code=%s", response.status_code)
-        player = response.json()
-        if response.status_code == 200:
-            if len(player):
-                elo = player[0]["mu"]
-        else:
-            logger.error("Error in get_gamestats. Status code: ", response.status_code)
-            return None
-        return elo
-
-    def found_match(self, puggame):
-        #excutes in case match is found and sends notification to all players
-        logger.info("found_match: puggame=%s", puggame)
-        pugplayers = PickupEntries.select().where(PickupEntries.gameId == puggame.id)
-        logger.info("found_match: pugplayers.count()=%s", pugplayers.count())
-        if pugplayers.count() == puggame.gametypeId.playerCount:
-            puggame.isPlayed = True
-            puggame.save()
-            if puggame.gametypeId.playerCount == puggame.gametypeId.teamCount or puggame.gametypeId.statsName is None:
-                ircmatchtext = puggame.gametypeId.title + " ready! Players are: "
-                matchtext = puggame.gametypeId.title + " ready! Players are: "
-                for pugplayer in pugplayers:
-                    if pugplayer.addedFrom == "irc":
-                        matchtext += pugplayer.playerId.ircName + " (" + pugplayer.playerId.statsDiscordName + ") "
-                        ircmatchtext += pugplayer.playerId.ircName + " (" + pugplayer.playerId.statsIRCName + ") "
-                    else:
-                        matchtext += pugplayer.playerId.discordMention + " (" + pugplayer.playerId.statsDiscordName + ") "
-                        ircmatchtext += pugplayer.playerId.discordName + " (" + pugplayer.playerId.statsIRCName + ") "
-                self.send_all(matchtext, ircmatchtext)
-            else:
-                self.send_all(puggame.gametypeId.title + " ready! Players are: ", puggame.gametypeId.title + " ready! Players are: ")
-
-                team_result = self.__create_teams(pugplayers, puggame.gametypeId.teamCount, puggame.gametypeId.statsName)
-                for i in range(0,len(team_result["irc"])):
-                    self.send_all(team_result["discord"][i], team_result["irc"][i])
 
     def set_irc_topic(self):
         #sets the current pickups as irc topic
@@ -382,13 +89,11 @@ class FriedyBot:
         method_name = 'command_' + str(argument[0][1:].lower())
         method = getattr(self, method_name, self.wrong_command)
         with self.thread_lock:
-            db.connect()
             try:
                 method(user, argument, chattype, isadmin)
             except Exception as e:
                 self.send_notice(user, "Sorry, something went wrong", chattype)
                 logger.error("Error in command:", e)
-            db.close()
 
     def send_notice(self, user, message, chattype):
         #sends message to only discord or to specific irc-user (for future: send direct message to discord-user)
@@ -415,57 +120,41 @@ class FriedyBot:
     def change_name(self, oldnick, newnick):
         #changes irc-name of users in case of nickname changes
         logger.info("change_name: oldnick=%s, newnick=%s", oldnick, newnick)
-        with self.thread_lock:
-            db.connect()
-            pl = Players.select().where(Players.ircName == oldnick).first()
-            if pl is not None:
-                pl.ircName = newnick
-                pl.save()
-            db.close()
+        self.dbconnect.set_irc_nickname(oldnick, newnick)
 
     def remove_user_on_exit(self, user,chattype):
         #removes user from all pickups in case of disconnect
         logger.info("remove_user_on_exit: user=%s, chattype=%s", user, chattype)
         gameentries = None
         player = None
-        with self.thread_lock:
-            db.connect()
-            try:                
-                #check where user removed from
-                player = self.__get_player(user, chattype)
-
-                #check if player is already in database
-                if player is not None:
-                    gameentries = PickupEntries.select().join(PickupGames).where(PickupGames.isPlayed == False).where(PickupEntries.playerId == player)
-                
-                if player and gameentries.exists():               
-                    result = self.__withdraw_player_from_all(player)
-                    if result:
-                        self.build_pickuptext()
-            except Exception as e:
-                logger.error("Error in remove_user_on_exit: ", e)
-            db.close()
-
+        
+        try:                        
+            result = self.dbconnect.withdraw_player_from_pickup(user, chattype=chattype)
+            if result:
+                self.build_pickuptext()
+        except Exception as e:
+            logger.error("Error in remove_user_on_exit: ", e)
 
     def build_pickuptext(self):
         #sends current pickup games to all channels
-        #result: "(1/2) duel (1/4) 2v2tdm"
-        logger.info("build_pickuptext")
-        testgames = PickupGames.select().where(PickupGames.isPlayed == False) ## ToDo wenn letzter eintrag gelöscht wird 
-        if not testgames.exists() and self.pickupText == "Pickups: ":
+        #result: "Pickups: duel (1/2) 2v2tdm (1/4)"        
+        logger.info("build_pickuptext")   
+        games_exists = self.dbconnect.has_active_games()
+        pickuptext_new = self.dbconnect.get_pickuptext()
+        if not games_exists and self.pickupText == "Pickups: ":
             self.set_irc_topic()
             return
 
-        if not testgames.exists() and self.pickupText != "Pickups: ":            
+        if not games_exists and self.pickupText != "Pickups: ":            
             self.pickupText = "Pickups: " 
             self.send_all(self.pickupText)     
             self.set_irc_topic()  
         else:
             self.pickupText = "Pickups: "
-            for testgame in testgames:
-                self.pickupText += testgame.gametypeId.title + " (" + str(len(testgame.addedplayers)) + "/" + str(testgame.gametypeId.playerCount) + ") "
+            self.pickupText += pickuptext_new
             self.send_all(self.pickupText)
             self.set_irc_topic()
+        return self.pickupText
     """
     Commands for IRC and discord
         Naming Convention for bot methods is command_yourcommand
@@ -480,142 +169,69 @@ class FriedyBot:
     def command_register(self, user, argument, chattype, isadmin):
         #command to connect player in database with their XonStats-account
         logger.info("command_register: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
-        if len(argument) > 1 and argument[1].isdigit():
-            try:                
-                xonstatscoloredname,xonstatsname = self.get_statsnames(argument[1])
-                pl = None
-                if xonstatsname is None:
-                    self.send_notice(user, "No Player with this ID", chattype)
-                    return
-                if chattype == "irc":
-                    pl = Players.select().where(Players.statsId == argument[1]).first()
-                    if pl is None:
-                        pl, plcreated = Players.get_or_create(ircName=user)
-                        pl.statsId = argument[1]
-                        pl.statsName = xonstatsname
-                        pl.statsIRCName = self.__irc_colors(xonstatscoloredname)
-                        pl.statsDiscordName = self.__discord_colors(xonstatscoloredname)
-                        pl.save()
-                    else:
-                        pl.ircName = user
-                        pl.statsName = xonstatsname
-                        pl.statsIRCName = self.__irc_colors(xonstatscoloredname)
-                        pl.statsDiscordName = self.__discord_colors(xonstatscoloredname)
-                        pl.save()
-                else:
-                    pl = Players.select().where(Players.statsId == argument[1]).first()
-                    if pl is None:
-                        pl, plcreated = Players.get_or_create(discordName=user.name)
-                        pl.discordMention = user.mention
-                        pl.statsId = argument[1]
-                        pl.statsName = xonstatsname
-                        pl.statsIRCName = self.__irc_colors(xonstatscoloredname)
-                        pl.statsDiscordName = self.__discord_colors(xonstatscoloredname)
-                        pl.save()
-                    else:
-                        pl.discordName = user.name
-                        pl.discordMention = user.mention
-                        pl.statsName = xonstatsname
-                        pl.statsIRCName = self.__irc_colors(xonstatscoloredname)
-                        pl.statsDiscordName = self.__discord_colors(xonstatscoloredname)
-                        pl.save()                
-                if chattype == "irc":
-                    self.send_all(self.cmdresults["misc"]["registsuccess"].format(user,argument[1],pl.statsDiscordName), self.cmdresults["misc"]["registsuccess"].format(user,argument[1],pl.statsIRCName))
-                else:
-                    self.send_all(self.cmdresults["misc"]["registsuccess"].format(user.name,argument[1],pl.statsDiscordName), self.cmdresults["misc"]["registsuccess"].format(user.name,argument[1],pl.statsIRCName))
-            except Exception as e:
-                logger.error("Error in command_register: ", e, "Reason: ", e.args)
-                self.send_notice(user, "Problem with XonStats", chattype)
+        xonstatsId: str = argument[1]
+        error_message: str = ""
+        discord_name: str = ""
+        irc_name: str = ""
+        error_message, discord_name, irc_name = self.dbconnect.register_player(user, xonstatsId, chattype)
+
+        if error_message == "":                           
+            if chattype == "irc":
+                self.send_all(self.cmdresults["misc"]["registsuccess"].format(user, xonstatsId, discord_name), 
+                              self.cmdresults["misc"]["registsuccess"].format(user, xonstatsId, irc_name))
+            else:
+                self.send_all(self.cmdresults["misc"]["registsuccess"].format(user.name, xonstatsId, discord_name), 
+                              self.cmdresults["misc"]["registsuccess"].format(user.name, xonstatsId, irc_name))
         else: 
-            self.send_notice(user,"No ID given!",chattype)
+            self.send_notice(user, error_message, chattype)
 
     def command_add(self, user, argument, chattype, isadmin):
         # command to add player to pickup games
         logger.info("command_add: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
-        pl = None
+        result: bool = False
+        error_messages: list[str] = []
+        found_match: dict = {}
+        gametypes: list[str] = argument[1:]
 
-        #check where user added from
-        if chattype == "irc":
-            pl, plcreated = Players.get_or_create(ircName=user)
-        else:
-            pl, plcreated = Players.get_or_create(discordName=user.name, discordMention=user.mention)
-            
-        #!add without gametype
-        if len(argument) == 1:
-            games = PickupGames.select().where(PickupGames.isPlayed == False)
+        result, error_messages, found_match = self.dbconnect.add_player_to_games(user, gametypes, chattype)
+        if result:
+            # match found ready to notify player 
+            if found_match:
+                # match with teams and captains
+                if found_match["has_teams"]:
+                    for i in range(0,len(found_match["irc"])):
+                        self.send_all(found_match["discord"][i], found_match["irc"][i])
+                else:
+                    self.send_all(found_match["discord"], found_match["irc"])
 
-            #no pickup game found and show possible gametypes
-            if not games.exists():
-                queryset = ""
-                for gametype in GameTypes:
-                    queryset += gametype.title + " "
-                self.send_notice(user, self.cmdresults["misc"]["nogame"] + queryset, chattype)
-            
-            #adds to all current active pickup games
-            else:
-                for game in games:
-                    pickentry = PickupEntries.select().where(PickupEntries.playerId == pl.id, PickupEntries.gameId == game.id).first()
-                    if pickentry is None:
-                        pickentry = PickupEntries(playerId=pl.id, gameId=game.id, addedFrom=chattype)
-                        pickentry.save()
-                        self.found_match(game)
-                    else:
-                        self.send_notice(user, "Already added for " + pickentry.gameId.gametypeId.title, chattype)
-                        return
+            #start the background timer to delete old pickup games
+            if self.picktimer is None or not self.picktimer.is_alive():
+                self.picktimer = threading.Thread(target=self.start_pugtimer, daemon=True)
+                self.picktimer.start()
+            self.build_pickuptext()
         
-        #add with gametypes
-        #example: !add duel 2v2tdm
-        else:
-            for gtypeentries in argument[1:]:
-                gtype = GameTypes.select().where(GameTypes.title == gtypeentries).first()
-                if gtype is not None:     
-                    game, gamcreated = PickupGames.get_or_create(gametypeId=gtype.id, isPlayed=False)
-                    pickentry = PickupEntries.select().where(PickupEntries.playerId == pl.id, PickupEntries.gameId == game.id).first()
-                    if pickentry is None:
-                        pickentry = PickupEntries(playerId=pl.id, gameId=game.id, addedFrom=chattype)
-                        pickentry.save()
-                        self.found_match(game)
-                    else:
-                        self.send_notice(user, "Already added for " + pickentry.gameId.gametypeId.title, chattype)
-
-        #start the background timer to delete old pickup games
-        if self.picktimer is None or not self.picktimer.is_alive():
-            self.picktimer = threading.Thread(target=self.start_pugtimer, daemon=True)
-            self.picktimer.start()
-        self.build_pickuptext()
+        for error_message in error_messages:
+            self.send_notice(user, error_message, chattype)
 
     def command_pickups(self, user, argument, chattype, isadmin):
         # command to know all available game types
         logger.info("command_pickups: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
-        queryset = ""
-        for gametype in GameTypes:
-            queryset += gametype.title + " "
-        self.send_notice(user, "Possible gametypes: " + queryset, chattype)
+        result: str = "Possible gametypes: "
+        result += ", ".join(self.dbconnect.get_gametype_list())
+        self.send_notice(user, result, chattype)
 
     def command_remove(self, user, argument, chattype, isadmin):
         # command to remove player from pickup games
         logger.info("command_remove: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
-        player = None
+        #TODO errormessages for wrong gametype
+        gametypes = argument[1:]
         
-        #check where user removed from
-        player = self.__get_player(user, chattype)
+        result = self.dbconnect.withdraw_player_from_pickup(user, gametypes, chattype)
         
-        result: bool = False
-        
-        #!remove without gametype, remove all entries and if only player removes pickup game completely
-        if len(argument) == 1:
-            result = self.__withdraw_player_from_all(player)
-        
-        #just removes gametypes that are given and if last player removes pickup game completely
-        #example: !remove duel
+        if result:            
+            return self.build_pickuptext() 
         else:
-            for gtypeentry in argument[1:]:
-                result = self.__withdraw_player_from_gametype(player, gtypeentry)
-        
-        if not result:
             self.send_notice(user, "No game added!", chattype)
-        else:
-            self.build_pickuptext()   
 
     def command_pull(self, user, argument, chattype, isadmin):
         # removes pickup player from games (just discord-moderators or irc-operators)
@@ -624,10 +240,8 @@ class FriedyBot:
             if len(argument) > 1:
                 result: bool = False
                 not_existing_players = []
-                player = None
                 for arg in argument[1:]:
-                    player = Players.select().where((Players.ircName == arg)|(Players.discordName == arg)).first()
-                    result = self.__withdraw_player_from_all(player)
+                    result = self.dbconnect.withdraw_player_from_pickup(arg)
                     if not result:
                         not_existing_players.append(arg)
                 
@@ -641,96 +255,58 @@ class FriedyBot:
         
     def command_renew(self, user, argument, chattype, isadmin):
         logger.info("command_renew: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
-        gameentries = None
-        player = None
+        gametypes: list[str] = argument[1:]
+        error_message: str = ""
 
-        #check where user renewed from
-        player = self.__get_player(user, chattype)
+        error_message = self.dbconnect.renew_pickupentry(user, gametypes, chattype)
 
-        #check if player is already in database
-        if player is not None:
-            gameentries = PickupEntries.select().join(PickupGames).where(PickupGames.isPlayed == False).where(PickupEntries.playerId == player)
+        if error_message:
+            self.send_notice(user, error_message, chattype)
         
-        #send message if theres is no active pickup game
-        if player is None or not gameentries.exists():
-            self.send_notice(user, "No game added!", chattype)
-
-        #!renew without gametype, renew all pickups of player
-        if len(argument) == 1:
-            for gameentry in gameentries:
-                gameentry.addedDate = datetime.now()
-                gameentry.save()
-
-        #just renews gametypes that are given
-        #example: !renew duel
-        else:
-            for gtypeentries in argument[1:]:
-                gtype = GameTypes.select().where(GameTypes.title == gtypeentries).first()
-                if gtype is not None:     
-                    gameentry = gameentries.select().where(PickupEntries.gameId == gtype.id).first()
-                    gameentry.addedDate = datetime.now()
-                    gameentry.save()
-        
-        self.build_pickuptext()
 
     def command_who(self, user, argument, chattype, isadmin):
         # command that shows list of pickup games and their players
         logger.info("command_who: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
-
-        games = PickupGames.select().where(PickupGames.isPlayed == False)
-        if not games.exists():
-            self.send_notice(user, "No game added!", chattype)
-        else:
-            resultText = ""
-            for game in games:
-                resultText += game.gametypeId.title + ": "
-                playerentries = game.addedplayers
-                for playerentry in playerentries:
-                    if playerentry.addedFrom == "irc":
-                        resultText += playerentry.playerId.ircName + " "
-                    else:
-                        resultText += playerentry.playerId.discordName + " "
-            self.send_notice(user, resultText, chattype)
+        result = self.dbconnect.get_active_games_and_players()
+        self.send_notice(user, result, chattype)
 
     def command_server(self, user, argument, chattype, isadmin):
         # !server without arguments shows all available servers
         logger.info("command_server: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
         if len(argument) == 1:
-            resultText = ""
-            for gameserver in Servers:
-                resultText += gameserver.serverName + " "
+            wrongs_server, resultText = self.dbconnect.get_server()
             self.send_all("Available servers: " + resultText)
 
         #shows specific servers from arguments
         #example: !server dogcity
         else:
-            gserver = Servers.select().where(Servers.serverName == argument[1]).first()
-            if gserver is not None:
-                self.send_all("Server: " + gserver.serverName + " with IP: " + gserver.serverIp)
+            wrongs_server, resultText = self.dbconnect.get_server(argument[1])
+            if wrongs_server:
+                self.send_notice(user, resultText, chattype)
             else:
-                self.send_notice(user, "Server: " + argument[1] + " not found!", chattype)
+                self.send_all(resultText)
 
     def command_addserver(self, user, argument, chattype, isadmin):
         #command to add servers with their ip:port to database
         logger.info("command_addserver: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
+        message: str = ""
+        server_name: str = argument[1] if len(argument) > 1 else None
+        server_address: str = argument[2] if len(argument) > 2 else None
+        
         if isadmin:
-            if len(argument) == 3:            
+            if server_address:            
                 try:
-                    sanitized_ip_and_port: str = argument[2].replace('[','').replace(']','')
+                    sanitized_ip_and_port: str = server_address.replace('[','').replace(']','')
                     ip = ":".join(sanitized_ip_and_port.split(":")[:-1])
-                    logger.info("command_addserver: ip=%s", ip)
+                    port = sanitized_ip_and_port.split(":")[-1]
+                    logger.info("command_addserver: ip=%s, port=%s", ip, port)
                     ip_address(ip)
-                    try:
-                        serv = Servers(serverName=argument[1],serverIp=sanitized_ip_and_port)
-                        serv.save()
-                    except:
-                        self.send_notice(user, "Server already registered!", chattype)
-                    self.send_notice(user, "Server " + argument[1] + " added.", chattype)
-                    
+                    message = self.dbconnect.add_server(server_name, sanitized_ip_and_port)
+                    self.send_notice(user, message, chattype)
                 except ValueError:
                     self.send_notice(user, "Not a valid IP-address! To add server: !addserver <servername> <ip:port>", chattype)
             else:
-                self.send_notice(user, "To add server: !addserver <servername> <ip:port>", chattype)
+                self.send_notice(user, self.cmdresults["cmds"]["addserver"], chattype)
         else:
             self.send_notice(user, self.cmdresults["misc"]["restricted"],chattype)
     
@@ -739,55 +315,44 @@ class FriedyBot:
         #Usage: !addgametype <gametypetitle> <playercount> <teamcount> <statsname>
         #example: !addgametype 2v2v2ca 6 3 ca
         logger.info("command_addgametype: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
+        message: str = ""
+        gt_title: str = argument[1] if len(argument) > 1 else None
+        gt_playercount: str = argument[2] if len(argument) > 2 and argument[2].isdigit() else None
+        gt_teamcount: str = argument[3] if len(argument) > 3 and argument[3].isdigit() else gt_playercount
+        gt_xonstatname: str = argument[4] if len(argument) > 4 else None
+
         if isadmin:
-            if len(argument) == 5 and argument[2].isdigit() and argument[3].isdigit():
-                try:
-                    game = GameTypes(title=argument[1], playerCount=argument[2], teamCount=argument[3], statsName=argument[4])
-                    game.save()
-                except:
-                    self.send_notice(user, "Gametype already registered!", chattype)
-                self.send_notice(user, "Gametype " + argument[1] + " added.", chattype)
+            if gt_playercount:
+                message = self.dbconnect.add_gametypes(gt_title, gt_playercount, gt_teamcount, gt_xonstatname)
             else:
-                self.send_notice(user, "To add gametype: !addgametype <gametypename> <playercount> <teamcount> <statsname>", chattype)
+                message = self.cmdresults["cmds"]["addgametype"]                
+            self.send_notice(user, message, chattype) 
         else:
             self.send_notice(user, self.cmdresults["misc"]["restricted"], chattype)
 
     def command_removeserver(self, user, argument, chattype, isadmin):
         #command to remove server from database
         logger.info("command_removeserver: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
-        if isadmin:
-            if len(argument) > 1:
-                resultText = ""
-                for serverentry in argument[1:]:
-                    gserver = Servers.select().where(Servers.serverName == serverentry).first()
-                    if gserver is not None:
-                        gserver.delete_instance()
-                        resultText += serverentry + " deleted. "
-                    else:
-                        resultText += serverentry + " not found. "
+        messages = []
+        serverlist = argument[1:]
 
-                self.send_notice(user, resultText, chattype)
-            else:
-                self.send_notice(user, "To delete server: !removeserver [<servername>]", chattype)
+        if isadmin:
+            messages = self.dbconnect.delete_server(serverlist)
+            for message in messages:
+                self.send_notice(user, message, chattype)            
         else:
             self.send_notice(user, self.cmdresults["misc"]["restricted"], chattype)
     
     def command_removegametype(self, user, argument, chattype, isadmin):
         #command to remove gametype from database
         logger.info("command_removegametype: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
+        messages = []
+        gametypes = argument[1:]
+
         if isadmin:
-            if len(argument) > 1:
-                resultText = ""
-                for gametypeentry in argument[1:]:
-                    gtype = GameTypes.select().where(GameTypes.title == gametypeentry).first()
-                    if gtype is not None:
-                        gtype.delete_instance()
-                        resultText += gametypeentry + " deleted. "
-                    else:
-                        resultText += gametypeentry + " not found. "
-                self.send_notice(user, resultText, chattype)
-            else:
-                self.send_notice(user, "To delete gametype: !removegametype [<gametypename>]", chattype)
+            messages = self.dbconnect.delete_gametypes(gametypes)
+            for message in messages:
+                self.send_notice(user, message, chattype)
         else:
             self.send_notice(user, self.cmdresults["misc"]["restricted"], chattype)
     
@@ -863,86 +428,68 @@ class FriedyBot:
             self.discordconnect.send_my_message("Online are: " + ", ".join(self.ircconnect.channels[self.settings["irc"]["channel"]]._users.keys()))
 
     def command_lastgame(self, user, argument, chattype, isadmin):
-        lastPickupGame = PickupGames.select().where(PickupGames.isPlayed == True).order_by(PickupGames.createdDate.desc()).first()
-        lastPickupGamePlayers = lastPickupGame.addedplayers
-        resultText = lastPickupGame.gametypeId.title + ", played on " + lastPickupGame.createdDate.strftime("%Y-%m-%d") + " was played with: "
-        for player in lastPickupGamePlayers:
-            if chattype == "irc":
-                playername = player.playerId.ircName if player.playerId.ircName is not None else player.playerId.discordName
-                resultText += playername + " " + ("("+player.playerId.statsIRCName + ") " if player.playerId.statsIRCName is not None else "")
-            else:
-                playername = player.playerId.discordName if player.playerId.discordName is not None else player.playerId.ircName
-                resultText += playername + " " + ("("+player.playerId.statsDiscordName + ") " if player.playerId.statsDiscordName is not None else "")
-                
-        self.send_notice(user, resultText, chattype)
+        logger.info("command_lastgame: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
+        result = self.dbconnect.get_lastgame(chattype)       
+        self.send_notice(user, result, chattype)
         
     def command_subscribe(self, user, argument, chattype, isadmin):
         logger.info("command_subscribe: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
-
+        result: bool = False
+        message: str = ""
+        discord_name: str = ""
         gametype_args = set(argument[1:])
         new_subscriptions = []
-        player = None
         
-        player = self.__get_player(user, chattype)
-
-        if not player:
-            self.send_notice(user, "You need to register first (!register) to subscribe!", chattype)
-            return
-        
-        subscriptions = self.__get_player_subscriptions(player)
-
         if gametype_args:
             for gametype_entry in gametype_args:
-                gametype = GameTypes.select().where(GameTypes.title == gametype_entry).first()
-                if gametype and (not subscriptions or not subscriptions.where(Subscriptions.gametypeId == gametype).exists()):
-                    new_subscriptions.append(gametype.title)
-                    playersub = Subscriptions(playerId=player,gametypeId=gametype)
-                    playersub.save()
-                    if player.discordName:
-                        self.discordconnect.give_role(player.discordName, gametype.title)
+                result, message, discord_name = self.dbconnect.add_subscription(user, gametype_entry, chattype)
+
+                if result:
+                    new_subscriptions.append(gametype_entry)
+                    if discord_name:
+                        self.discordconnect.give_role(discord_name, gametype_entry)
                 else:
-                    self.send_notice(user,"You can't subscribe to: " + gametype_entry, chattype)
+                    self.send_notice(user, message, chattype)
             if not new_subscriptions:
                 self.command_pickups(user, argument, chattype, isadmin)
             else:
                 self.send_notice(user, "You are now subscribed to: " + ", ".join(new_subscriptions), chattype)
         else:
+            subscriptions = self.dbconnect.get_subscriptions(user, chattype)
             if subscriptions:                
-                self.send_notice(user, "You are subscribed to: " + ", ".join([x.gametypeId.title for x in subscriptions]), chattype)
-            self.command_pickups(user, argument, chattype, isadmin)
+                self.send_notice(user, "You are subscribed to: " + ", ".join([x for x in subscriptions]), chattype)
+            else:
+                self.command_pickups(user, argument, chattype, isadmin)
 
     def command_unsubscribe(self, user, argument, chattype, isadmin):
         logger.info("command_unsubscribe: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
         gametype_args = set(argument[1:])
-        player = None
-
-        player = self.__get_player(user, chattype)
-
-        if not player:
-            self.send_notice(user, "You need to register first (!register) to subscribe/unsubscribe!", chattype)
-            return
-        
-        subscriptions = self.__get_player_subscriptions(player)
+        message: str = ""
+        discord_name: str = ""
 
         if gametype_args:
             for gametype_entry in gametype_args:
-                sub_entry = subscriptions.select().join(GameTypes).where(GameTypes.title == gametype_entry).first()
-                if sub_entry:
-                    sub_entry.delete_instance()
-                    if player.discordName:
-                        self.discordconnect.take_role(player.discordName, gametype_entry)
+                message, discord_name = self.dbconnect.delete_subscription(user, gametype_entry, chattype)
+                if message:
+                    self.send_notice(user, message, chattype)
                 else:
-                    self.send_notice(user, "You are not subscribed to: " + gametype_entry, chattype)
-        else:
-            if player.discordName:
-                for sub_entry in subscriptions:
-                    sub_entry.delete_instance()
-                    self.discordconnect.take_role(player.discordName,sub_entry.gametypeId.title)
+                    if discord_name:
+                        self.discordconnect.take_role(discord_name, gametype_entry)
+                
+        else:            
+            subscriptions = self.dbconnect.get_subscriptions(user, chattype)
+            for gametype_entry in subscriptions:
+                message, discord_name = self.dbconnect.delete_subscription(user, gametype_entry, chattype)
+                if message:                    
+                    self.send_notice(user, message, chattype)                    
+                else:
+                    if discord_name:
+                        self.discordconnect.take_role(discord_name, gametype_entry)
 
-        subscriptions = self.__get_player_subscriptions(player)
+        subscriptions = self.dbconnect.get_subscriptions(user, chattype)
 
         if subscriptions:
-            self.send_notice(user, "You are subscribed to: " + ", ".join([x.gametypeId.title for x in subscriptions]), chattype)
+            self.send_notice(user, "You are subscribed to: " + ", ".join([x for x in subscriptions]), chattype)
         else:
             self.send_notice(user, "You are subscribed to nothing!", chattype)
 
