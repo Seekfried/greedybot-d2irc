@@ -190,7 +190,7 @@ class FriedyBot:
         irc_name: str = ""
         error_message, discord_name, irc_name = self.dbconnect.register_player(user, xonstatsId, chattype)
 
-        if error_message != "":                           
+        if error_message == "":                           
             if chattype == "irc":
                 self.send_all(self.cmdresults["misc"]["registsuccess"].format(user, xonstatsId, discord_name), 
                               self.cmdresults["misc"]["registsuccess"].format(user, xonstatsId, irc_name))

@@ -435,7 +435,7 @@ class DatabaseConnector:
     
     def register_player(self, user, xonstatId, chattype) -> tuple[str, str, str]:
         db_logger.info("register_player: user=%s, xonstatId=%s, chattype=%s", user, xonstatId, chattype)
-        error_result: str = "No ID given!"
+        error_result: str = ""
         irc_name: str = ""
         discord_name: str = ""
 
@@ -448,23 +448,34 @@ class DatabaseConnector:
                     error_result = "No Player with this ID"
                     return
                 if chattype == "irc":
+                    irc_player = Players.select().where(Players.ircName == user).first()
                     pl = Players.select().where(Players.statsId == xonstatId).first()
-                    if pl is None:
+                    if pl is None and irc_player is None:
                         pl = Players(ircName = user, 
                                      statsId = xonstatId, 
                                      statsName = xonstatsname, 
                                      statsIRCName = irc_colors(xonstatscoloredname), 
                                      statsDiscordName = discord_colors(xonstatscoloredname))
-                        pl.save()
-                    else:
-                        pl.ircName = user
-                        pl.statsName = xonstatsname
-                        pl.statsIRCName = irc_colors(xonstatscoloredname)
-                        pl.statsDiscordName = discord_colors(xonstatscoloredname)
-                        pl.save()
+                        pl.save()                        
+                        irc_name = pl.statsIRCName
+                        discord_name = pl.statsDiscordName
+                    else:                        
+                        if irc_player == pl:
+                            error_result = "Already registered with Xonstat account #" + xonstatId
+                        if irc_player and pl is None:
+                            irc_player.statsName = xonstatsname
+                            irc_player.statsId = xonstatId
+                            irc_player.statsIRCName = irc_colors(xonstatscoloredname)
+                            irc_player.statsDiscordName = discord_colors(xonstatscoloredname)
+                            irc_player.save()
+                            irc_name = irc_player.statsIRCName
+                            discord_name = irc_player.statsDiscordName                        
+                        else:
+                            error_result = "Another player is registered with Xonstat account #" + xonstatId
                 else:
+                    discord_player = Players.select().where(Players.discordName == user.name).first()
                     pl = Players.select().where(Players.statsId == xonstatId).first()
-                    if pl is None:
+                    if pl is None and discord_player is None:
                         pl = Players(discordName = user.name, 
                                      discordMention = user.mention, 
                                      statsId = xonstatId, 
@@ -472,20 +483,27 @@ class DatabaseConnector:
                                      statsIRCName = irc_colors(xonstatscoloredname), 
                                      statsDiscordName = discord_colors(xonstatscoloredname))
                         pl.save()
+                        irc_name = pl.statsIRCName
+                        discord_name = pl.statsDiscordName
+                        
                     else:
-                        pl.discordName = user.name
-                        pl.discordMention = user.mention
-                        pl.statsName = xonstatsname
-                        pl.statsIRCName = irc_colors(xonstatscoloredname)
-                        pl.statsDiscordName = discord_colors(xonstatscoloredname)
-                        pl.save()  
-                irc_name = pl.statsIRCName
-                discord_name = pl.statsDiscordName
-                error_result = ""
+                        if discord_player == pl:
+                            error_result = "Already registered with Xonstat account #" + xonstatId
+                        if discord_player and pl is None:
+                            discord_player.statsId = xonstatId
+                            discord_player.statsName = xonstatsname
+                            discord_player.statsIRCName = irc_colors(xonstatscoloredname)
+                            discord_player.statsDiscordName = discord_colors(xonstatscoloredname)
+                            discord_player.save()
+                            irc_name = discord_player.statsIRCName
+                            discord_name = discord_player.statsDiscordName
+                        else:
+                            error_result = "Another player is registered with Xonstat account #" + xonstatId
             except Exception as e:
                 db_logger.error("Error in command_register: ", e, "Reason: ", e.args)
                 error_result = "Problem with XonStats"
-
+        else:
+            error_result = "No ID given!"
         db.close()
         return error_result, discord_name, irc_name
     
