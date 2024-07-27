@@ -296,13 +296,13 @@ class FriedyBot:
         if isadmin:
             if server_address:            
                 try:
-                    ip = server_address.split(":")[0]
                     sanitized_ip_and_port: str = server_address.replace('[','').replace(']','')
                     ip = ":".join(sanitized_ip_and_port.split(":")[:-1])
-                    logger.info("command_addserver: ip=%s", ip)
+                    port = sanitized_ip_and_port.split(":")[-1]
+                    logger.info("command_addserver: ip=%s, port=%s", ip, port)
                     ip_address(ip)
                     message = self.dbconnect.add_server(server_name, sanitized_ip_and_port)
-                    self.send_notice(user, message, chattype) 
+                    self.send_notice(user, message, chattype)
                 except ValueError:
                     self.send_notice(user, "Not a valid IP-address! To add server: !addserver <servername> <ip:port>", chattype)
             else:
