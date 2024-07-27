@@ -2,6 +2,7 @@ from model import *
 from typing import List
 import logging
 from xonotic.utils import *
+from datetime import datetime
 from ipaddress import ip_address
 
 db_logger = logging.getLogger("dbConnector")
@@ -10,11 +11,7 @@ class DatabaseConnector:
     
     def __init__(self):
         db_logger.info("Initialize db connection")
-        db.start()
         self.delete_active_games()
-
-    def __del__(self):
-        db.stop()
 
     def __get_active_games(self) -> PickupGames:
         games = PickupGames.select().where(PickupGames.isPlayed == False)
@@ -33,7 +30,6 @@ class DatabaseConnector:
         discordresult: str = ""
 
         db_logger.info("found_match: puggame=%s", puggame)
-
         pugplayers = PickupEntries.select().where(PickupEntries.gameId == puggame.id)
         db_logger.info("found_match: pugplayers.count()=%s", pugplayers.count())
         if pugplayers.count() == puggame.gametypeId.playerCount:
@@ -55,8 +51,8 @@ class DatabaseConnector:
                 team_result = self.__get_teamtext(pugplayers, puggame.gametypeId.teamCount, puggame.gametypeId.statsName)
                 ircresult = team_result["irc"]
                 discordresult = team_result["discord"]
-                ircresult.insert(0, puggame.gametypeId.title + " ready! Players are: ", puggame.gametypeId.title + " ready! Players are: ")
-                discordresult.insert(0, puggame.gametypeId.title + " ready! Players are: ", puggame.gametypeId.title + " ready! Players are: ")
+                ircresult.insert(0, puggame.gametypeId.title + " ready! Players are: ")
+                discordresult.insert(0, puggame.gametypeId.title + " ready! Players are: ")
             result = {"has_teams": has_teams, "irc": ircresult, "discord": discordresult}
         return result
     
@@ -146,38 +142,38 @@ class DatabaseConnector:
             return False
         
         for gameentry in gameentries:
-            gid = gameentry.gameId
-            gameentry.delete_instance()
-            game = PickupGames.select().where(PickupGames.id == gid).first()
-            if len(game.addedplayers) == 0:
-                game.delete_instance()        
+            self.__withdraw_player_from_gametype(player, gameentry.gameId.gametypeId.title)
+            # gid = gameentry.gameId
+            # gameentry.delete_instance()
+            # game = PickupGames.select().where(PickupGames.id == gid).first()
+            # if len(game.addedplayers) == 0:
+            #     game.delete_instance()        
         return True
     
-    def __withdraw_player_from_gametype(self, player, gametypeId) -> bool:
+    def __withdraw_player_from_gametype(self, player, gametypetitle) -> bool:
         if player is None:
             return False
         
-        gtype = GameTypes.select().where(GameTypes.title == gametypeId).first()
+        gtype = GameTypes.select().where(GameTypes.title == gametypetitle).first()
         if gtype is not None:     
             games = PickupGames.select().where(PickupGames.gametypeId == gtype.id, PickupGames.isPlayed == False)
             for game in games:
-                PickupEntries.delete().where(PickupEntries.playerId == player, PickupEntries.gameId == game.id).execute()
-                if len(game.addedplayers) == 0:
-                    game.delete_instance()                    
+                PickupEntries.delete().where(PickupEntries.playerId == player, PickupEntries.gameId == game.id).execute()                  
         return True
     
-    def add_gametypes(gametypes) -> list[str]:
-        messages = []
-        if len(gametypes) == 5 and gametypes[2].isdigit() and gametypes[3].isdigit():
-            try:
-                game = GameTypes(title=gametypes[1], playerCount=gametypes[2], teamCount=gametypes[3], statsName=gametypes[4])
-                game.save()
-                messages.append("Gametype " + gametypes[1] + " added.")
-            except:
-                messages.append("Gametype already registered!")
-        else:
-            messages.append("To add gametype: !addgametype <gametypename> <playercount> <teamcount> <statsname>")
-        return messages
+    def add_gametypes(self, gt_title, gt_playercount, gt_teamcount, gt_xonstatname) -> str:
+        message = ""
+
+        db.connect()
+        try:
+            game = GameTypes(title=gt_title, playerCount=gt_playercount, teamCount=gt_teamcount, statsName=gt_xonstatname)
+            game.save()
+            message = "Gametype " + gt_title + " added."
+        except:
+            message = "Gametype already registered!"
+        
+        db.close()
+        return message
 
     def add_player_to_games(self, user, gametypes:List[str], chattype) -> tuple[bool, list[str], dict]:
         db_logger.info("add_player_to_games: user=%s, gametypes=%s, chattype=%s", user, gametypes, chattype)
@@ -209,10 +205,11 @@ class DatabaseConnector:
                             pickentry = PickupEntries(playerId=player.id, gameId=game.id, addedFrom=chattype)
                             pickentry.save()
                             result = True
-                            found_match = self.__get_found_matchtext(game)
+                            found = self.__get_found_matchtext(game)
+                            if found:
+                                found_match = found
                         else:
                             error_message.append("Already added for " + pickentry.gameId.gametypeId.title)
-                            return result, error_message
             #add with gametypes
             #example: !add duel 2v2tdm
             else:
@@ -228,33 +225,30 @@ class DatabaseConnector:
                             pickentry = PickupEntries(playerId=player.id, gameId=game.id, addedFrom=chattype)
                             pickentry.save()
                             result = True
-                            found_match = self.__get_found_matchtext(game)
+                            found = self.__get_found_matchtext(game)
+                            if found:
+                                found_match = found
                         else:
                             error_message.append("Already added for " + pickentry.gameId.gametypeId.title)
         else:
             error_message.append("You need to register first (!register) to add for games!")
+
         db.close()
         return result, error_message, found_match
     
-    def add_server(serverlist) -> list[str]:
-        messages = []
+    def add_server(self, servername, serveraddress) -> str:
+        message = ""
 
-        if len(serverlist) == 3:            
-            try:
-                ip = serverlist[2].split(":")[0]
-                ip_address(ip)
-                try:
-                    serv = Servers(serverName=serverlist[1],serverIp=serverlist[2])
-                    serv.save()
-                    messages.append("Server " + serverlist[1] + " added.")
-                except:
-                    messages.append("Server already registered!")
-                
-            except ValueError:
-                messages.append("Not a valid IP-address! To add server: !addserver <servername> <ip:port>")
-        else:
-            messages.append( "To add server: !addserver <servername> <ip:port>")
-        return messages
+        db.connect()
+        try:
+            serv = Servers(serverName=servername, serverIp=serveraddress)
+            serv.save()
+            message = "Server " + servername + " added."
+        except:
+            message = "Server already registered!"   
+
+        db.close()             
+        return message
 
     def delete_active_games(self):
         #Delete pickgames that were not played
@@ -262,25 +256,19 @@ class DatabaseConnector:
         games = PickupGames.delete().where(PickupGames.isPlayed == False)
         games.execute()
         db.close()
-
-    def delete_server(self, serverlist) -> list[str]:
+    
+    def delete_games_without_player(self):
+        db.connect()
+        games = self.__get_active_games()
+        for game in games:
+            if len(game.addedplayers) == 0:
+                game.delete_instance() 
+        db.close()
+    
+    def delete_gametypes(self, gametypes) -> list[str]:
         messages = []
 
-        if serverlist:
-            for serverentry in serverlist:
-                gserver = Servers.select().where(Servers.serverName == serverentry).first()
-                if gserver is not None:
-                    gserver.delete_instance()
-                    messages.append(serverentry + " deleted.")
-                else:
-                    messages.append(serverentry + " not found.")
-        else:
-            messages.append("To delete server: !removeserver [<servername>]")        
-        return messages
-
-    def delete_gametypes(gametypes) -> list[str]:
-        messages = []
-
+        db.connect()
         if gametypes:
             for gametypeentry in gametypes:
                 gtype = GameTypes.select().where(GameTypes.title == gametypeentry).first()
@@ -291,6 +279,26 @@ class DatabaseConnector:
                     messages.append(gametypeentry + " not found.")
         else:
             messages.append("To delete gametype: !removegametype [<gametypename>]")
+        
+        db.close()
+        return messages
+
+    def delete_server(self, serverlist) -> list[str]:
+        messages = []
+
+        db.connect()
+        if serverlist:
+            for serverentry in serverlist:
+                gserver = Servers.select().where(Servers.serverName == serverentry).first()
+                if gserver is not None:
+                    gserver.delete_instance()
+                    messages.append(serverentry + " deleted.")
+                else:
+                    messages.append(serverentry + " not found.")
+        else:
+            messages.append("To delete server: !removeserver [<servername>]")    
+
+        db.close()    
         return messages
 
     
@@ -298,11 +306,15 @@ class DatabaseConnector:
         #Get a list of strings of all possible gametypes
         result = []
 
+        db.connect()
         for gametype in GameTypes:
             result.append(gametype.title)
+
+        db.close()
         return result
 
     def get_lastgame(self, chattype) -> str:
+        db.connect()
         lastPickupGame = PickupGames.select().where(PickupGames.isPlayed == True).order_by(PickupGames.createdDate.desc()).first()
         lastPickupGamePlayers = lastPickupGame.addedplayers
         resultText = lastPickupGame.gametypeId.title + ", played on " + lastPickupGame.createdDate.strftime("%Y-%m-%d") + " was played with: "
@@ -313,6 +325,7 @@ class DatabaseConnector:
             else:
                 playername = player.playerId.discordName if player.playerId.discordName is not None else player.playerId.ircName
                 resultText += playername + " " + ("("+player.playerId.statsDiscordName + ") " if player.playerId.statsDiscordName is not None else "")
+        db.close()
 
     def get_pickuptext(self) -> tuple[bool, str]:
         #Get string of active pickups with gametype and number of players/player needed 
@@ -379,7 +392,46 @@ class DatabaseConnector:
         result = games.exists()
         db.close()
         return result
+    
+    def pugtimer_step(self, mindiff, currenttime, deletetime, warntime) -> tuple[int, bool, bool, dict]:
+        #return values 
+        # mindiff as int: new min-difference, 
+        # has_break as bool: timer should take a break, 
+        # has_new_text as bool: should send pickuptext
+        # warn_user as dict: {"user": "usernameToWarn", "chattype": "irc"/"discord"} 
+        has_break: bool = False
+        has_new_text: bool = False
+        warn_user: dict = {}
 
+        db.connect()
+        pugentries = PickupEntries.select().join(PickupGames).where(PickupGames.isPlayed == False).order_by(PickupEntries.addedDate.asc())
+        for pugentry in pugentries:
+            pugdiff = round((currenttime - pugentry.addedDate).total_seconds())
+            if pugdiff >= deletetime:
+                gid = pugentry.gameId
+                pugentry.delete_instance()
+                game = PickupGames.select().where(PickupGames.id == gid).first()
+                if len(game.addedplayers) == 0:
+                    game.delete_instance()
+                    has_new_text = True
+            elif pugdiff >= warntime:
+                if mindiff > deletetime - pugdiff:
+                    mindiff = deletetime - pugdiff  
+                if not pugentry.isWarned:
+                    pugentry.isWarned = True
+                    pugentry.save()
+                    if pugentry.addedFrom == "irc":                        
+                        warn_user = {"user": pugentry.playerId.ircName, "chattype": "irc"}
+                    else:
+                        warn_user = {"user": pugentry.playerId.discordMention, "chattype": "discord"}                                                                                        
+            else:
+                if mindiff > warntime - pugdiff:
+                    mindiff = warntime - pugdiff
+                # else:
+                #     has_break = True
+        db.close()
+        return mindiff, has_break, has_new_text, warn_user
+    
     
     def register_player(self, user, xonstatId, chattype) -> tuple[str, str, str]:
         db_logger.info("register_player: user=%s, xonstatId=%s, chattype=%s", user, xonstatId, chattype)
@@ -388,7 +440,6 @@ class DatabaseConnector:
         discord_name: str = ""
 
         db.connect()
-
         if xonstatId and xonstatId.isdigit():
             try:                
                 xonstatscoloredname, xonstatsname = get_statsnames(xonstatId)
@@ -443,6 +494,7 @@ class DatabaseConnector:
         player = None
         error_result: str = ""
 
+        db.connect()
         #check where user renewed from
         player = self.__get_player(user, chattype)
 
@@ -457,6 +509,7 @@ class DatabaseConnector:
         #!renew without gametype, renew all pickups of player
         if not gametypes:
             for gameentry in gameentries:
+                gameentry.isWarned = False
                 gameentry.addedDate = datetime.now()
                 gameentry.save()
 
@@ -467,8 +520,11 @@ class DatabaseConnector:
                 gtype = GameTypes.select().where(GameTypes.title == gtypeentries).first()
                 if gtype is not None:     
                     gameentry = gameentries.select().where(PickupEntries.gameId == gtype.id).first()
+                    gameentry.isWarned = False
                     gameentry.addedDate = datetime.now()
                     gameentry.save()
+
+        db.close()
         return error_result
     
     def withdraw_player_from_pickup(self, user, gametypes:List[str] = None, chattype = None) -> bool:
@@ -485,7 +541,7 @@ class DatabaseConnector:
             player = Players.select().where((Players.ircName == user)|(Players.discordName == user)).first()
                 
         #!remove without gametype, remove all entries and if only player removes pickup game completely
-        if gametypes:
+        if not gametypes:
             result = self.__withdraw_player_from_all(player)
         
         #just removes gametypes that are given and if last player removes pickup game completely
@@ -493,7 +549,10 @@ class DatabaseConnector:
         else:
             for gametype in gametypes:
                 result = self.__withdraw_player_from_gametype(player, gametype)
+
         db.close()
+        if result:
+            self.delete_games_without_player()
         return result
     
     def set_irc_nickname(self, oldnick, newnick):

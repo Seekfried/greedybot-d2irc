@@ -55,45 +55,36 @@ class FriedyBot:
         self.discordconnect.run()
         self.ircconnect.close()
     
-    # def start_pugtimer(self):
-    #     #background timer to warn players of expiring pickup games or deletes old pickup games
-    #     warntime = self.settings["bot"]["pugtimewarning"]
-    #     deletetime = self.settings["bot"]["pugtimeout"]
-    #     while True:
-    #         mindiff = warntime
-    #         currenttime = datetime.now()
-    #         pugentries = PickupEntries.select().join(PickupGames).where(PickupGames.isPlayed == False).order_by(PickupEntries.addedDate.asc())
-    #         if pugentries.exists():
-    #             for pugentry in pugentries:
-    #                 pugdiff = round((currenttime - pugentry.addedDate).total_seconds())
-    #                 if pugdiff >= deletetime:
-    #                     gid = pugentry.gameId
-    #                     pugentry.delete_instance()
-    #                     game = PickupGames.select().where(PickupGames.id == gid).first()
-    #                     if len(game.addedplayers) == 0:
-    #                         game.delete_instance()
-    #                     self.build_pickuptext()
-    #                 elif pugdiff >= warntime:
-    #                     if mindiff > deletetime - pugdiff:
-    #                         mindiff = deletetime - pugdiff  
-    #                     if not pugentry.isWarned:
-    #                         pugentry.isWarned = True
-    #                         pugentry.save()
-    #                         if pugentry.addedFrom == "irc":
-    #                             self.send_notice(pugentry.playerId.ircName, self.cmdresults["misc"]["pugtimewarn"], "irc")
-    #                         else:
-    #                             self.send_notice(None, pugentry.playerId.discordMention +  " " + self.cmdresults["misc"]["pugtimewarn"], "discord")                                                             
-    #                 else:
-    #                     if mindiff > warntime - pugdiff:
-    #                         mindiff = warntime - pugdiff
-    #                     else:
-    #                         break
-    #             if not self.dbconnect.has_active_games():
-    #                 return
-    #             else:
-    #                 time.sleep(mindiff)
-    #         else:
-    #             return
+    def start_pugtimer(self):
+        #background timer to warn players of expiring pickup games or deletes old pickup games
+        warntime = self.settings["bot"]["pugtimewarning"]
+        deletetime = self.settings["bot"]["pugtimeout"]
+        while True:
+            mindiff = warntime
+            currenttime = datetime.now()      
+            if self.dbconnect.has_active_games(): #pugentries.exists():
+
+                mindiff, has_break, has_new_text, warn_user = self.dbconnect.pugtimer_step(mindiff, currenttime, deletetime, warntime)
+                
+                #player was over the time and got remove from game
+                if has_new_text:
+                    self.build_pickuptext()
+
+                #player gets notified: "Your added games will expire in 20 minutes, type !renew to renew your games"
+                if warn_user:
+                    if warn_user["chattype"] == "irc":
+                        self.send_notice(warn_user["user"], self.cmdresults["misc"]["pugtimewarn"], warn_user["chattype"])
+                    else:
+                        self.send_notice(None, warn_user["user"] +  " " + self.cmdresults["misc"]["pugtimewarn"], warn_user["chattype"])
+
+                if has_break:
+                    break
+                if not self.dbconnect.has_active_games():
+                    return
+                else:
+                    time.sleep(mindiff)
+            else:
+                return
 
     def set_irc_topic(self):
         #sets the current pickups as irc topic
@@ -229,10 +220,10 @@ class FriedyBot:
                     self.send_all(found_match["discord"], found_match["irc"])
 
             #start the background timer to delete old pickup games
-            # if self.picktimer is None or not self.picktimer.is_alive():
-            #     self.picktimer = threading.Thread(target=self.start_pugtimer, daemon=True)
-            #     self.picktimer.start()
-            # self.build_pickuptext()
+            if self.picktimer is None or not self.picktimer.is_alive():
+                self.picktimer = threading.Thread(target=self.start_pugtimer, daemon=True)
+                self.picktimer.start()
+            self.build_pickuptext()
         
         for error_message in error_messages:
             self.send_notice(user, error_message, chattype)
@@ -247,7 +238,7 @@ class FriedyBot:
     def command_remove(self, user, argument, chattype, isadmin):
         # command to remove player from pickup games
         logger.info("command_remove: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
-        
+        #TODO errormessages for wrong gametype
         gametypes = argument[1:]
         
         result = self.dbconnect.withdraw_player_from_pickup(user, gametypes, chattype)
@@ -313,12 +304,24 @@ class FriedyBot:
     def command_addserver(self, user, argument, chattype, isadmin):
         #command to add servers with their ip:port to database
         logger.info("command_addserver: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
-        messages = []
+        message: str = ""
+        server_name: str = argument[1] if len(argument) > 1 else None
+        server_address: str = argument[2] if len(argument) > 2 else None
         
         if isadmin:
-            messages = self.dbconnect.add_server(argument)
-            for message in messages:
-                self.send_notice(user, message, chattype) 
+            if server_address:            
+                try:
+                    ip = server_address.split(":")[0]
+                    sanitized_ip_and_port: str = server_address.replace('[','').replace(']','')
+                    ip = ":".join(sanitized_ip_and_port.split(":")[:-1])
+                    logger.info("command_addserver: ip=%s", ip)
+                    ip_address(ip)
+                    message = self.dbconnect.add_server(server_name, sanitized_ip_and_port)
+                    self.send_notice(user, message, chattype) 
+                except ValueError:
+                    self.send_notice(user, "Not a valid IP-address! To add server: !addserver <servername> <ip:port>", chattype)
+            else:
+                self.send_notice(user, self.cmdresults["cmds"]["addserver"], chattype)
         else:
             self.send_notice(user, self.cmdresults["misc"]["restricted"],chattype)
     
@@ -327,12 +330,18 @@ class FriedyBot:
         #Usage: !addgametype <gametypetitle> <playercount> <teamcount> <statsname>
         #example: !addgametype 2v2v2ca 6 3 ca
         logger.info("command_addgametype: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
-        messages = []
+        message: str = ""
+        gt_title: str = argument[1] if len(argument) > 1 else None
+        gt_playercount: str = argument[2] if len(argument) > 2 and argument[2].isdigit() else None
+        gt_teamcount: str = argument[3] if len(argument) > 3 and argument[3].isdigit() else gt_playercount
+        gt_xonstatname: str = argument[4] if len(argument) > 4 else None
 
         if isadmin:
-            messages = self.dbconnect.add_gametypes(argument)
-            for message in messages:
-                self.send_notice(user, message, chattype) 
+            if gt_playercount:
+                message = self.dbconnect.add_gametypes(gt_title, gt_playercount, gt_teamcount, gt_xonstatname)
+            else:
+                message = self.cmdresults["cmds"]["addgametype"]                
+            self.send_notice(user, message, chattype) 
         else:
             self.send_notice(user, self.cmdresults["misc"]["restricted"], chattype)
 
