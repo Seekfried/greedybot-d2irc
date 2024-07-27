@@ -53,7 +53,7 @@ class DatabaseConnector:
                 discordresult = team_result["discord"]
                 ircresult.insert(0, puggame.gametypeId.title + " ready! Players are: ")
                 discordresult.insert(0, puggame.gametypeId.title + " ready! Players are: ")
-            result = {"has_teams": has_teams, "irc": ircresult, "discord": discordresult}
+            result = {"has_teams": has_teams, "irc": ircresult, "discord": discordresult, "playercount": puggame.gametypeId.playerCount}
         return result
     
     def __get_player(self, user, chattype) -> Players:
@@ -206,7 +206,7 @@ class DatabaseConnector:
                             pickentry.save()
                             result = True
                             found = self.__get_found_matchtext(game)
-                            if found:
+                            if found_match is None or found and found["playercount"] > found_match["playercount"]:
                                 found_match = found
                         else:
                             error_message.append("Already added for " + pickentry.gameId.gametypeId.title)
@@ -227,7 +227,8 @@ class DatabaseConnector:
                             result = True
                             found = self.__get_found_matchtext(game)
                             if found:
-                                found_match = found
+                                if not found_match or (found["playercount"] > found_match["playercount"]):
+                                    found_match = found
                         else:
                             error_message.append("Already added for " + pickentry.gameId.gametypeId.title)
         else:
