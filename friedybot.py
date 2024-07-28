@@ -1,10 +1,9 @@
 from unittest import result
-#from model import *
 from bracket.bracketcreator import get_cuppicture
 from ipaddress import ip_address
 import threading
-import requests
 import random
+from typing import List
 import re
 import logging
 from datetime import datetime
@@ -498,3 +497,19 @@ class FriedyBot:
         #TODO promote for more than one gametype and also for irc
         self.discordconnect.send_my_message_with_mention("Add to play game @player_" + argument[1])
 
+    def command_info(self, user, argument, chattype, isadmin):
+        logger.info("command_info: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
+                    
+        if len(argument) > 1:
+            player = argument[1]
+            skills_stats: List[dict] = self.dbconnect.get_skill_stats(player, chattype)
+            
+            if len(skills_stats) > 0:
+                response = "Player: " + player
+                for skill in skills_stats:
+                    response += " | " + skill["game_type_cd"] + " elo: " + str(round(skill["mu"],2))
+                self.send_notice(user, response, chattype)
+            else:
+                self.send_notice(user, "No player found!", chattype)
+        else:
+            self.send_notice(user, "No player given!", chattype)

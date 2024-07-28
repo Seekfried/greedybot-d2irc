@@ -3,7 +3,6 @@ from typing import List
 import logging
 from xonotic.utils import *
 from datetime import datetime
-from ipaddress import ip_address
 
 db_logger = logging.getLogger("dbConnector")
 
@@ -626,9 +625,43 @@ class DatabaseConnector:
         return result
     
     def set_irc_nickname(self, oldnick, newnick):
+        db_logger.info("set_irc_nickname: oldnick=%s, newnick=%s", oldnick, newnick)
         db.connect()
         pl = Players.select().where(Players.ircName == oldnick).first()
         if pl is not None:
             pl.ircName = newnick
             pl.save()
         db.close()
+        
+    def get_skill_stats(self, player_name: str, chattype: str) -> List[dict]:
+        db_logger.info("get_skill_stats: player=%s, chattype=%s", player_name, chattype)
+        skill_stats: List[dict] = []
+        stats_id: int = -1
+        db.connect()
+        player: Players = None
+
+        if chattype == "irc":
+            player = Players.select().where(Players.ircName == player_name).first()
+        else:
+            player = Players.select().where(Players.discordName == player_name).first()
+            
+        if player is None:
+            if chattype == "discord":
+                player = Players.select().where(Players.ircName == player_name).first()
+            else:
+                player = Players.select().where(Players.discordName == player_name).first()
+
+        if player is None:
+            if player_name.isdigit():
+                stats_id = int(player_name)
+        else:
+            stats_id = player.statsId
+        db.close()
+    
+        db_logger.info("get_skill_stats: player=%s, stats_id=%d", player, stats_id)
+
+        if stats_id != -1:
+            skill_stats = get_full_gamestats(stats_id)
+            
+        return skill_stats
+        

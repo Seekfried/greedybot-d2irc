@@ -1,6 +1,7 @@
 import re
 import logging
 import requests
+from typing import List
 
 utils_logger = logging.getLogger("xonoticUtils")
 
@@ -146,3 +147,16 @@ def get_gamestats(id, gtype):
         utils_logger.error("Error in get_gamestats. Status code: ", response.status_code)
         return None
     return elo
+
+def get_full_gamestats(id) -> List[dict]:
+    utils_logger.info("get_full_stats: id=%s", id)
+    game_stats: List[dict] = []
+    header = {'Accept': 'application/json'}
+    response = requests.get("https://stats.xonotic.org/player/" + str(id) + "/skill", headers=header)
+    utils_logger.info("get_full_stats: response.status_code=%s", response.status_code)
+    if response.status_code == 200:
+        game_stats.extend(response.json())
+    else:
+        utils_logger.error("Error in get_full_stats. Status code: ", response.status_code)
+        return []
+    return game_stats
