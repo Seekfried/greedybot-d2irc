@@ -1,6 +1,8 @@
 import re
 import logging
 import requests
+from bs4 import BeautifulSoup, element
+import random
 
 utils_logger = logging.getLogger("xonoticUtils")
 
@@ -146,3 +148,46 @@ def get_gamestats(id, gtype):
         utils_logger.error("Error in get_gamestats. Status code: ", response.status_code)
         return None
     return elo
+
+def get_serverinfo(serverip:str) -> list[str]:
+    URL = "https://xonotic.lifeisabug.com/"
+    result: bool = False
+    serverinfos: list[str] = []
+    try:
+        page = requests.get(URL)
+        soup = BeautifulSoup(page.content, "html.parser")
+        server_item = soup.find_all("tr", attrs={"data-id": serverip})
+        if server_item:
+            result = True
+            serverinfos.append("Name: " + server_item[0].contents[3].text)  
+            serverinfos.append("Gametype: " + server_item[0].contents[5].text)        
+            serverinfos.append("Map: " + server_item[0].contents[7].text)        
+            serverinfos.append("Player: " + server_item[0].contents[9].text)
+        return result, serverinfos
+    except:
+        print("Server not online")
+        return result, serverinfos
+ 
+def get_quote(playername:str = None) -> list[str]:
+    URL = "http://devfull.de:27600/random"
+    quotes = []
+    lines = []
+    if playername:
+        URL = "http://devfull.de:27600/nick/" + playername
+    try:
+        page = requests.get(URL)
+        soup = BeautifulSoup(page.content, "html.parser")
+       
+        for tags in soup.find_all("div", class_="quote"):
+            for items in tags.find_all("div", class_="text"):
+                quotes.append(items.contents)
+       
+        quote_number = random.randint(0, len(quotes) - 1)
+ 
+        for sendtext in quotes[quote_number]:
+            if type(sendtext) is element.NavigableString:
+                lines.append(sendtext)
+    except:
+        lines.append("No quote found for player: " + playername)
+ 
+    return lines
