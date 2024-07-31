@@ -426,6 +426,25 @@ class DatabaseConnector:
         db.close()
         return wrong_server, result
     
+    def get_server_info(self, servername) -> tuple[bool, list[str]]:
+        #TODO use rcon in future
+        messages: list[str] = []
+        wrong_server: bool = False
+        result: bool = False
+
+        db.connect()
+        server: Servers = Servers.select().where(Servers.serverName == servername).first()
+        if server is not None:
+            result, messages = get_serverinfo(server.serverIp)
+            if not result:
+                messages = "Server: " + servername + " offline!"
+                wrong_server = True
+        else:
+            wrong_server = True
+            messages = "Server: " + servername + " not found!"
+        db.close()
+        return wrong_server, messages
+    
     def get_subscriptions(self, user, chattype) -> list[str]:
         subs: list[str] = []
         db.connect()
