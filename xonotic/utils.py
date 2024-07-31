@@ -1,6 +1,7 @@
 import re
 import logging
 import requests
+from typing import List
 from bs4 import BeautifulSoup, element
 import random
 
@@ -77,7 +78,7 @@ def discord_colors(qstr: str) -> str:
     return result
 
 # Method taken from zykure's bot: https://gitlab.com/xonotic-zykure/multibot
-def irc_colors( qstr: str) -> str:
+def irc_colors(qstr: str) -> str:
     _irc_colors = [ -1, 4, 9, 8, 12, 11, 13, -1, -1, -1 ]
 
     _all_colors = re.compile(r'(\^\d|\^x[\dA-Fa-f]{3})')
@@ -120,7 +121,7 @@ def irc_colors( qstr: str) -> str:
     result += "\017"
     return result
 
-def get_statsnames(id):
+def get_statsnames(id) -> tuple:
     #get xonstat player names
     utils_logger.info("get_statsnames: id=%s", id)
     header =  {'Accept': 'application/json'}
@@ -132,6 +133,19 @@ def get_statsnames(id):
     else:
         utils_logger.error("Error in get_statsnames. Status code: ", response.status_code)
         return None
+
+def get_full_stats(id) -> dict:
+    utils_logger.info("get_full_stats: id=%s", id)
+    stats: dict = {}
+    header = {'Accept': 'application/json'}
+    response = requests.get("https://stats.xonotic.org/player/" + str(id), headers=header)
+    utils_logger.info("get_full_stats: response.status_code=%s", response.status_code)
+    if response.status_code == 200:
+        stats = response.json()
+    else:
+        utils_logger.error("Error in get_full_stats. Status code: ", response.status_code)
+        return {}
+    return stats
 
 def get_gamestats(id, gtype):        
     #get xonstat player elo for specific gametype
@@ -148,6 +162,19 @@ def get_gamestats(id, gtype):
         utils_logger.error("Error in get_gamestats. Status code: ", response.status_code)
         return None
     return elo
+
+def get_full_gamestats(id) -> List[dict]:
+    utils_logger.info("get_full_gamestats: id=%s", id)
+    game_stats: List[dict] = []
+    header = {'Accept': 'application/json'}
+    response = requests.get("https://stats.xonotic.org/player/" + str(id) + "/skill", headers=header)
+    utils_logger.info("get_full_stats: response.status_code=%s", response.status_code)
+    if response.status_code == 200:
+        game_stats.extend(response.json())
+    else:
+        utils_logger.error("Error in get_full_stats. Status code: ", response.status_code)
+        return []
+    return game_stats
 
 def get_serverinfo(serverip:str) -> list[str]:
     URL = "https://xonotic.lifeisabug.com/"
@@ -191,3 +218,4 @@ def get_quote(playername:str = None) -> list[str]:
         lines.append("No quote found for player: " + playername)
  
     return lines
+

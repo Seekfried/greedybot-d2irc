@@ -1,10 +1,9 @@
 from unittest import result
-#from model import *
 from bracket.bracketcreator import get_cuppicture
 from ipaddress import ip_address
 import threading
-import requests
 import random
+from typing import List
 import re
 import logging
 from datetime import datetime
@@ -499,6 +498,32 @@ class FriedyBot:
         #TODO promote for more than one gametype and also for irc
         self.discordconnect.send_my_message_with_mention("Add to play game @player_" + argument[1])
 
+    def command_info(self, user, argument, chattype, isadmin):
+        logger.info("command_info: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
+                    
+        if len(argument) > 1:
+            player = argument[1]
+            stats: dict = self.dbconnect.get_full_stats(player, chattype)
+            if stats and stats["player"]:
+                skills_stats: List[dict] = stats["skill_stats"]
+
+                
+                response: str = ("Player: " + stats["player"]["colored_name"] + " (" + str(stats["player"]["player_id"]) + "). " +
+                                "Joined: " + stats["player"]["joined_fuzzy"] + ". Games played: " + str(stats["games_played"]["overall"]["games"]) +
+                                ". Wins: " + str(round(stats["games_played"]["overall"]["win_pct"],2)) + "%. ")
+                
+                if len(skills_stats) > 0:
+                    for skill in skills_stats:
+                        response += " | " + skill["game_type_cd"] + " elo: " + str(round(skill["mu"],2))
+                    
+                else:
+                    response += " | No games found"
+                self.send_notice(user, response, chattype)
+            else:
+                self.send_notice(user, "No player found!", chattype)
+        else:
+            self.send_notice(user, "No player given!", chattype)
+
     def command_quote(self, user, argument, chattype, isadmin):
         logger.info("command_quote: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
         quotelines: list[str] = []
@@ -523,3 +548,4 @@ class FriedyBot:
             else:
                 for line in server_infos:
                     self.send_all(line)
+
