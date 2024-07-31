@@ -3,6 +3,7 @@ from typing import List
 import logging
 from xonotic.utils import *
 from datetime import datetime
+from copy import deepcopy
 
 db_logger = logging.getLogger("dbConnector")
 
@@ -383,23 +384,24 @@ class DatabaseConnector:
         db.close()
         return result
        
-    def get_active_games_and_players(self) -> str:
-        result: str = "No game added!"
+    def get_active_games_and_players(self) -> dict:        
+        # structur of result
+        # {"duel": {"irc":["Seek-y"], "discord":[], "playercount":"(1/2)"}, "2v2tdm": {"irc":["Seek-y", "Grunt"], "discord":["Silence"], "playercount":"(3/4)"}} 
+        result: dict = {}
+        inner_result: dict = {"irc":[], "discord":[], "playercount":""}
 
         db.connect()
         games: List[PickupGames] = self.__get_active_games()
         if games.exists():
-            result = ""
             for game in games:
-                result += game.gametypeId.title + ": "
-                playerentries: List[PickupEntries] = game.addedplayers
-                existing_players = []
+                result.update({game.gametypeId.title : deepcopy(inner_result) })
+                playerentries: List[PickupEntries] = game.addedplayers                
+                result[game.gametypeId.title]["playercount"] = "(" + str(len(playerentries)) + "/" + str(game.gametypeId.playerCount) + ")"
                 for playerentry in playerentries:
                     if playerentry.addedFrom == "irc":
-                        existing_players.append(playerentry.playerId.ircName)
+                        result[game.gametypeId.title]["irc"].append(playerentry.playerId.ircName)
                     else:
-                        existing_players.append(playerentry.playerId.discordName)
-                result += ", ".join(existing_players) + " "
+                        result[game.gametypeId.title]["discord"].append(playerentry.playerId.discordName)                    
 
         db.close()
         return result
@@ -444,8 +446,19 @@ class DatabaseConnector:
         db.close()
         return wrong_server, messages
     
+    def get_subscribed_players(self, gametypetitle:str) -> List[str]:
+        result: List[str] = []
+
+        db.connect()
+        subscripts = Subscriptions.select().join(GameTypes).where(GameTypes.title == gametypetitle)
+        for subscript in subscripts:
+            result.append(subscript.playerId.ircName)
+        db.close()
+        return result
+
     def get_subscriptions(self, user, chattype) -> list[str]:
         subs: list[str] = []
+
         db.connect()
         player = self.__get_player(user, chattype)
         if player:
