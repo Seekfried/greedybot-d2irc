@@ -502,12 +502,21 @@ class FriedyBot:
                     
         if len(argument) > 1:
             player = argument[1]
-            skills_stats: List[dict] = self.dbconnect.get_skill_stats(player, chattype)
-            
-            if len(skills_stats) > 0:
-                response = "Player: " + player
-                for skill in skills_stats:
-                    response += " | " + skill["game_type_cd"] + " elo: " + str(round(skill["mu"],2))
+            stats: dict = self.dbconnect.get_full_stats(player, chattype)
+            if stats and stats["player"]:
+                skills_stats: List[dict] = stats["skill_stats"]
+
+                
+                response: str = ("Player: " + stats["player"]["colored_name"] + " (" + str(stats["player"]["player_id"]) + "). " +
+                                "Joined: " + stats["player"]["joined_fuzzy"] + ". Games played: " + str(stats["games_played"]["overall"]["games"]) +
+                                ". Wins: " + str(round(stats["games_played"]["overall"]["win_pct"],2)) + "%. ")
+                
+                if len(skills_stats) > 0:
+                    for skill in skills_stats:
+                        response += " | " + skill["game_type_cd"] + " elo: " + str(round(skill["mu"],2))
+                    
+                else:
+                    response += " | No games found"
                 self.send_notice(user, response, chattype)
             else:
                 self.send_notice(user, "No player found!", chattype)

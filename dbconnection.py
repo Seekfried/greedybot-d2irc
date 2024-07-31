@@ -633,9 +633,10 @@ class DatabaseConnector:
             pl.save()
         db.close()
         
-    def get_skill_stats(self, player_name: str, chattype: str) -> List[dict]:
+    def get_full_stats(self, player_name: str, chattype: str) -> dict:
         db_logger.info("get_skill_stats: player=%s, chattype=%s", player_name, chattype)
         skill_stats: List[dict] = []
+        stats = {}
         stats_id: int = -1
         db.connect()
         player: Players = None
@@ -662,6 +663,16 @@ class DatabaseConnector:
 
         if stats_id != -1:
             skill_stats = get_full_gamestats(stats_id)
+            stats = get_full_stats(stats_id)
+            if stats.get('player') is not None:
+                stats["skill_stats"] = skill_stats
+                if chattype == "irc":
+                    stats["player"]["colored_name"] = irc_colors(stats["player"]["nick"])
+                elif chattype == "discord":
+                    stats["player"]["colored_name"] = discord_colors(stats["player"]["nick"])
+                else:
+                    stats["player"]["colored_name"] = stats["player"]["stripped_nick"]
             
-        return skill_stats
-        
+        return stats
+    
+    
