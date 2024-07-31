@@ -50,6 +50,14 @@ class DiscordConnector:
         global client
         asyncio.run_coroutine_threadsafe(send_my_file_async(path), client.loop)
 
+    def send_promote_message(self, message, gametype):
+        global client
+        role_name:str = "player_" + gametype
+        role = discord.utils.get(channel.guild.roles, name=role_name)
+        if role:
+            message = role.mention + " " + (message)
+            asyncio.run_coroutine_threadsafe(send_my_message_async(message), client.loop)
+
     def give_role(self, username, gametype):
         global client
         user = discord.utils.get(channel.guild.members, name=username)
@@ -131,7 +139,7 @@ async def on_message(message):
         print("[Discord] %s: %s" % (message.author.name, message.content.strip()))
     
     content = message.clean_content
-    bot.ircconnect.send_my_message("%s: %s" % (message.author.name, content))
+    bot.ircconnect.send_my_message("<%s> %s" % (message.author.name, content))
 
     for attachment in message.attachments:
         bot.ircconnect.send_my_message("URL: " + attachment.url)

@@ -268,7 +268,16 @@ class FriedyBot:
         # command that shows list of pickup games and their players
         logger.info("command_who: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
         result = self.dbconnect.get_active_games_and_players()
-        self.send_notice(user, result, chattype)
+        resultText:str = ""
+
+        if not result:            
+            self.send_notice(user, "No game added!", chattype)
+        else:            
+            for gametype in result.keys():
+                resultText += gametype + result[gametype]["playercount"] +": "
+                players = result[gametype]["irc"] + result[gametype]["discord"]
+                resultText += ", ".join(players) + " "
+            self.send_notice(user, resultText, chattype)
 
     def command_server(self, user, argument, chattype, isadmin):
         # !server without arguments shows all available servers
@@ -387,7 +396,7 @@ class FriedyBot:
             victim = argument[1]
             #fill user list with discord/irc users
             discord_users = self.discordconnect.get_online_members()
-            irc_users = list(self.ircconnect.channels[self.settings["irc"]["channel"]]._users.keys())
+            irc_users = list(self.ircconnect.get_online_users())
             #random chance 
             is_random_chance = random.random() <= self.xonotic["chance"]
             #victim is real user
@@ -425,7 +434,7 @@ class FriedyBot:
         if chattype == "irc":
             self.ircconnect.send_my_message("Online are: " + ", ".join(self.discordconnect.get_online_members()))
         else:
-            self.discordconnect.send_my_message("Online are: " + ", ".join(self.ircconnect.channels[self.settings["irc"]["channel"]]._users.keys()))
+            self.discordconnect.send_my_message("Online are: " + ", ".join(self.ircconnect.get_online_users()))
 
     def command_lastgame(self, user, argument, chattype, isadmin):
         logger.info("command_lastgame: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
@@ -496,7 +505,21 @@ class FriedyBot:
     def command_promote(self, user, argument, chattype, isadmin):
         logger.info("command_promote: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
         #TODO promote for more than one gametype and also for irc
-        self.discordconnect.send_my_message_with_mention("Add to play game @player_" + argument[1])
+        gametype_args = set(argument[1:])
+        active_games_and_player: dict = self.dbconnect.get_active_games_and_players()
+        notify_players: List[str] = []
+        online_players: List[str] = self.ircconnect.get_online_users()
+
+        for gametype in gametype_args:
+            if gametype in active_games_and_player.keys():
+                self.discordconnect.send_promote_message(gametype + " " + active_games_and_player[gametype]["playercount"] + " please add!", gametype)
+                gametype_subs = self.dbconnect.get_subscribed_players(gametype)
+                notify_players = [player for player in gametype_subs if player not in active_games_and_player[gametype]["irc"]]
+                notify_players = [player for player in notify_players if player in online_players]
+                for notify_player in notify_players:
+                    self.send_notice(notify_player, notify_player + ": " + gametype + " " + active_games_and_player[gametype]["playercount"] + " please add!", "irc")
+            else:
+                print("No active pickup found for: " + gametype)
 
     def command_info(self, user, argument, chattype, isadmin):
         logger.info("command_info: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
@@ -506,7 +529,6 @@ class FriedyBot:
             stats: dict = self.dbconnect.get_full_stats(player, chattype)
             if stats and stats["player"]:
                 skills_stats: List[dict] = stats["skill_stats"]
-
                 
                 response: str = ("Player: " + stats["player"]["colored_name"] + " (" + str(stats["player"]["player_id"]) + "). " +
                                 "Joined: " + stats["player"]["joined_fuzzy"] + ". Games played: " + str(stats["games_played"]["overall"]["games"]) +
