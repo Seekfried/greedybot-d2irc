@@ -18,6 +18,7 @@
         "pull":"remove specific player from pickup games: !pull [<players>]",
         "who":"List all current pickup games with players",
         "online":"List all current online discord-members for irc-users and vice versa",
+        "info":"Show information about one player: !info <playername>|<statsid>",
         "kill":"Command for marking users with xonotic flavour",
         "addgametype":"To add gametype: !addgametype <gametypename> <playercount> <teamcount> <statsname>",
         "addserver":"To add server: !addserver <servername> <ip:port>",

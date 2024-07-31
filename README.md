@@ -94,6 +94,7 @@ There are three other different setting files:
 - **!server**: Show all available Xonotic servers or specific server and their IP: !server \<servername>
 - **!who**: List all current pickup games with players
 - **!online**: List all current online discord-members for irc-users and vice versa
+- **!info**: Show information about one player: !info \{\<playername>\|\<statsid>\}
 - **!subscribe**: Add to subscription to a specific gametype to get notified in !promote command: !subscribe \[\<gametype>]
 - **!unsubscribe**: Remove from all gametype subscriptions or specific gametype subscription: !unsubscribe \[\<gametype>]
 - **!promote**: Notify all players to gametype specific pickupgame: !promote \[\<gametype>]
