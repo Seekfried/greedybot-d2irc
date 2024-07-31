@@ -11,6 +11,7 @@ import time
 from ircconnection import IrcConnector
 from discordconnection import DiscordConnector
 from dbconnection import DatabaseConnector
+from xonotic.utils import get_quote
 
 logger = logging.getLogger("friedybot")
 
@@ -522,3 +523,29 @@ class FriedyBot:
                 self.send_notice(user, "No player found!", chattype)
         else:
             self.send_notice(user, "No player given!", chattype)
+
+    def command_quote(self, user, argument, chattype, isadmin):
+        logger.info("command_quote: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
+        quotelines: list[str] = []
+        q_player: str = argument[1] if len(argument) > 1 else None
+        quotelines = get_quote(q_player)
+        for line in quotelines:
+            self.send_all("Quote: \"" + line + "\"")
+
+    def command_serverinfo(self, user, argument, chattype, isadmin):
+        logger.info("command_serverinfo: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
+        server_infos = []
+        resultText: str = ""
+        server: str = argument[1] if len(argument) > 1 else None
+
+        if len(argument) == 1:
+            wrongs_server, resultText = self.dbconnect.get_server()
+            self.send_all("Available servers: " + resultText)
+        else:
+            wrongs_server, server_infos = self.dbconnect.get_server_info(server)
+            if wrongs_server:
+                self.send_notice(user, server_infos, chattype)
+            else:
+                for line in server_infos:
+                    self.send_all(line)
+

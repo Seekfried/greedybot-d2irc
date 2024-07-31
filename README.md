@@ -98,6 +98,8 @@ There are three other different setting files:
 - **!unsubscribe**: Remove from all gametype subscriptions or specific gametype subscription: !unsubscribe \[\<gametype>]
 - **!promote**: Notify all players to gametype specific pickupgame: !promote \[\<gametype>]
 - **!lastgame**: Show the last played pickupgame with date and players: !lastgame
+- **!quote**: Get random quote from quoteDB or with playername from specific player: !quote \<playername>
+- **!serverinfo**: Get infos from server like name, map, player, gametype: !serverinfo \<servername>
 - **!kill**: Command for marking users with xonotic flavour (*see xonotic.json for more*)
 - **!bridge**: Switch bridge functionality on or off (for yourself)
 
@@ -107,7 +109,7 @@ There are three other different setting files:
 - **!addgametype**: To add gametype: !addgametype \<gametypename> \<playercount> \<teamcount> \<statsname>
 - **!addserver**: To add server: !addserver \<servername> \<ip:port>
 - **!removegametype**: To delete gametype: !removegametype \[\<gametypename>]
-- **!removeserver**: To delete server: !removeserver \[\<servername>],
+- **!removeserver**: To delete server: !removeserver \[\<servername>]
 
 ### Cup Generation
 - at the moment just direct cup generation with **!cupstart** (future feature -> with player signing in themselves)

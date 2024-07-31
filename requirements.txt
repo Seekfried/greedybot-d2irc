@@ -4,3 +4,4 @@ irc==20.4.3
 numpy==2.0.0
 peewee==3.17.6
 requests==2.32.3
+beautifulsoup4==4.12.3
