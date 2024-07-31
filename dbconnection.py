@@ -660,16 +660,7 @@ class DatabaseConnector:
         db.connect()
         player: Players = None
 
-        if chattype == "irc":
-            player = Players.select().where(Players.ircName == player_name).first()
-        else:
-            player = Players.select().where(Players.discordName == player_name).first()
-            
-        if player is None:
-            if chattype == "discord":
-                player = Players.select().where(Players.ircName == player_name).first()
-            else:
-                player = Players.select().where(Players.discordName == player_name).first()
+        player = Players.select().where((Players.ircName == player_name)|(Players.discordName == player_name)).first()
 
         if player is None:
             if player_name.isdigit():
