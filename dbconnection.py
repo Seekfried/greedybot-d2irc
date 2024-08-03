@@ -201,8 +201,8 @@ class DatabaseConnector:
                                 pickentry.save()
                                 result = True
                                 found = self.__get_found_matchtext(game)
-                                if found_match is None or found and found["playercount"] > found_match["playercount"]:
-                                    found_match = found
+                                if not found_match or (found["playercount"] > found_match["playercount"]):
+                                    found_match = deepcopy(found)
                             else:
                                 error_message.append("Already added for " + pickentry.gameId.gametypeId.title)
                 #add with gametypes
