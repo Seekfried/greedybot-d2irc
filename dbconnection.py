@@ -143,11 +143,6 @@ class DatabaseConnector:
         
         for gameentry in gameentries:
             self.__withdraw_player_from_gametype(player, gameentry.gameId.gametypeId.title)
-            # gid = gameentry.gameId
-            # gameentry.delete_instance()
-            # game = PickupGames.select().where(PickupGames.id == gid).first()
-            # if len(game.addedplayers) == 0:
-            #     game.delete_instance()        
         return True
     
     def __withdraw_player_from_gametype(self, player, gametypetitle) -> bool:
@@ -155,10 +150,10 @@ class DatabaseConnector:
             return False
         
         gtype = GameTypes.select().where(GameTypes.title == gametypetitle).first()
-        if gtype is not None:     
+        if gtype is not None: 
             games = PickupGames.select().where(PickupGames.gametypeId == gtype.id, PickupGames.isPlayed == False)
             for game in games:
-                PickupEntries.delete().where(PickupEntries.playerId == player, PickupEntries.gameId == game.id).execute()                  
+                PickupEntries.delete().where(PickupEntries.playerId == player, PickupEntries.gameId == game.id).execute()
         return True
     
     def add_gametypes(self, gt_title, gt_playercount, gt_teamcount, gt_xonstatname) -> str:
@@ -197,7 +192,7 @@ class DatabaseConnector:
                     for gametype in GameTypes:
                         gametype_result.append(gametype.title)
                     error_message.append("No game found! Possible gametypes: " + ", ".join(gametype_result))
-                #adds to all current active pickup games    
+                #adds to all current active pickup games
                 else:
                     for game in games:
                         pickentry = PickupEntries.select().where(PickupEntries.playerId == player.id, PickupEntries.gameId == game.id).first()
@@ -215,7 +210,7 @@ class DatabaseConnector:
             else:
                 for gtypeentries in gametypes:
                     gtype = GameTypes.select().where(GameTypes.title == gtypeentries).first()
-                    if gtype is not None:     
+                    if gtype is not None:
                         game = PickupGames.select().where(PickupGames.gametypeId == gtype.id, PickupGames.isPlayed == False).first()
                         if game is None:
                             game = PickupGames(gametypeId=gtype.id, isPlayed=False)
@@ -246,9 +241,9 @@ class DatabaseConnector:
             serv.save()
             message = "Server " + servername + " added."
         except:
-            message = "Server already registered!"   
+            message = "Server already registered!" 
 
-        db.close()             
+        db.close() 
         return message
     
     def add_subscription(self, user, gametypetitle, chattype) -> str:
@@ -260,7 +255,7 @@ class DatabaseConnector:
         player = self.__get_player(user, chattype)
         if not player:
             message = "You need to register first (!register) to subscribe!"
-        else:        
+        else:
             subscriptions = self.__get_player_subscriptions(player)
             gametype = GameTypes.select().where(GameTypes.title == gametypetitle).first()
             if gametype and (not subscriptions or not subscriptions.where(Subscriptions.gametypeId == gametype).exists()):
@@ -320,9 +315,9 @@ class DatabaseConnector:
                 else:
                     messages.append(serverentry + " not found.")
         else:
-            messages.append("To delete server: !removeserver [<servername>]")    
+            messages.append("To delete server: !removeserver [<servername>]")
 
-        db.close()    
+        db.close()
         return messages
 
     def delete_subscription(self, user, gametypetitle, chattype) -> list[str]:
@@ -343,6 +338,61 @@ class DatabaseConnector:
 
         db.close()
         return message, discord_name
+    
+    def get_active_games_and_players(self) -> dict:
+        # structur of result
+        # {"duel": {"irc":["Seek-y"], "discord":[], "playercount":"(1/2)"}, "2v2tdm": {"irc":["Seek-y", "Grunt"], "discord":["Silence"], "playercount":"(3/4)"}} 
+        result: dict = {}
+        inner_result: dict = {"irc":[], "discord":[], "playercount":""}
+
+        db.connect()
+        games: List[PickupGames] = self.__get_active_games()
+        if games.exists():
+            for game in games:
+                result.update({game.gametypeId.title : deepcopy(inner_result) })
+                playerentries: List[PickupEntries] = game.addedplayers
+                result[game.gametypeId.title]["playercount"] = "(" + str(len(playerentries)) + "/" + str(game.gametypeId.playerCount) + ")"
+                for playerentry in playerentries:
+                    if playerentry.addedFrom == "irc":
+                        result[game.gametypeId.title]["irc"].append(playerentry.playerId.ircName)
+                    else:
+                        result[game.gametypeId.title]["discord"].append(playerentry.playerId.discordName)
+
+        db.close()
+        return result
+    
+    def get_full_stats(self, player_name: str, chattype: str) -> dict:
+        db_logger.info("get_skill_stats: player=%s, chattype=%s", player_name, chattype)
+        skill_stats: List[dict] = []
+        stats = {}
+        stats_id: int = -1
+        db.connect()
+        player: Players = None
+
+        player = Players.select().where((Players.ircName == player_name)|(Players.discordName == player_name)).first()
+
+        if player is None:
+            if player_name.isdigit():
+                stats_id = int(player_name)
+        else:
+            stats_id = player.statsId
+        db.close()
+    
+        db_logger.info("get_skill_stats: player=%s, stats_id=%d", player, stats_id)
+
+        if stats_id != -1:
+            skill_stats = get_full_gamestats(stats_id)
+            stats = get_full_stats(stats_id)
+            if stats.get('player') is not None:
+                stats["skill_stats"] = skill_stats
+                if chattype == "irc":
+                    stats["player"]["colored_name"] = irc_colors(stats["player"]["nick"])
+                elif chattype == "discord":
+                    stats["player"]["colored_name"] = discord_colors(stats["player"]["nick"])
+                else:
+                    stats["player"]["colored_name"] = stats["player"]["stripped_nick"]
+            
+        return stats
 
     def get_gametype_list(self) -> List[str]:
         #Get a list of strings of all possible gametypes
@@ -384,28 +434,6 @@ class DatabaseConnector:
         db.close()
         return result
        
-    def get_active_games_and_players(self) -> dict:        
-        # structur of result
-        # {"duel": {"irc":["Seek-y"], "discord":[], "playercount":"(1/2)"}, "2v2tdm": {"irc":["Seek-y", "Grunt"], "discord":["Silence"], "playercount":"(3/4)"}} 
-        result: dict = {}
-        inner_result: dict = {"irc":[], "discord":[], "playercount":""}
-
-        db.connect()
-        games: List[PickupGames] = self.__get_active_games()
-        if games.exists():
-            for game in games:
-                result.update({game.gametypeId.title : deepcopy(inner_result) })
-                playerentries: List[PickupEntries] = game.addedplayers                
-                result[game.gametypeId.title]["playercount"] = "(" + str(len(playerentries)) + "/" + str(game.gametypeId.playerCount) + ")"
-                for playerentry in playerentries:
-                    if playerentry.addedFrom == "irc":
-                        result[game.gametypeId.title]["irc"].append(playerentry.playerId.ircName)
-                    else:
-                        result[game.gametypeId.title]["discord"].append(playerentry.playerId.discordName)                    
-
-        db.close()
-        return result
-    
     def get_server(self, servername = None) -> tuple[bool, str]:
         result: str = ""
         wrong_server: bool = False
@@ -467,6 +495,20 @@ class DatabaseConnector:
         db.close()
         return subs
     
+    def get_unbridged_players(self) -> tuple[List[str], List[str]]:
+        muted_discord_users = []
+        muted_irc_users = []
+
+        db.connect()
+        players: List[Players] = Players.select().where(Players.shouldBridge == False)
+        for player in players:
+            if player.discordName:
+                muted_discord_users.append(player.discordName)
+            if player.ircName:
+                muted_irc_users.append(player.ircName)
+        db.close()
+        return muted_discord_users, muted_irc_users
+    
     def has_active_games(self) -> bool:
         result: bool = False
 
@@ -503,10 +545,10 @@ class DatabaseConnector:
                 if not pugentry.isWarned:
                     pugentry.isWarned = True
                     pugentry.save()
-                    if pugentry.addedFrom == "irc":                        
+                    if pugentry.addedFrom == "irc":
                         warn_user = {"user": pugentry.playerId.ircName, "chattype": "irc"}
                     else:
-                        warn_user = {"user": pugentry.playerId.discordMention, "chattype": "discord"}                                                                                        
+                        warn_user = {"user": pugentry.playerId.discordMention, "chattype": "discord"}
             else:
                 if mindiff > warntime - pugdiff:
                     mindiff = warntime - pugdiff
@@ -514,7 +556,6 @@ class DatabaseConnector:
                 #     has_break = True
         db.close()
         return mindiff, has_break, has_new_text, warn_user
-    
     
     def register_player(self, user, xonstatId, chattype) -> tuple[str, str, str]:
         db_logger.info("register_player: user=%s, xonstatId=%s, chattype=%s", user, xonstatId, chattype)
@@ -524,7 +565,7 @@ class DatabaseConnector:
 
         db.connect()
         if xonstatId and xonstatId.isdigit():
-            try:                
+            try:
                 xonstatscoloredname, xonstatsname = get_statsnames(xonstatId)
                 pl = None
                 if xonstatsname is None:
@@ -539,10 +580,10 @@ class DatabaseConnector:
                                      statsName = xonstatsname, 
                                      statsIRCName = irc_colors(xonstatscoloredname), 
                                      statsDiscordName = discord_colors(xonstatscoloredname))
-                        pl.save()                        
+                        pl.save()
                         irc_name = pl.statsIRCName
                         discord_name = pl.statsDiscordName
-                    else:                        
+                    else:
                         if irc_player == pl:
                             error_result = "Already registered with Xonstat account #" + xonstatId
                         if irc_player and pl is None:
@@ -552,7 +593,7 @@ class DatabaseConnector:
                             irc_player.statsDiscordName = discord_colors(xonstatscoloredname)
                             irc_player.save()
                             irc_name = irc_player.statsIRCName
-                            discord_name = irc_player.statsDiscordName                        
+                            discord_name = irc_player.statsDiscordName
                         else:
                             error_result = "Another player is registered with Xonstat account #" + xonstatId
                 else:
@@ -619,7 +660,7 @@ class DatabaseConnector:
         else:
             for gtypeentries in gametypes:
                 gtype = GameTypes.select().where(GameTypes.title == gtypeentries).first()
-                if gtype is not None:     
+                if gtype is not None: 
                     gameentry = gameentries.select().where(PickupEntries.gameId == gtype.id).first()
                     gameentry.isWarned = False
                     gameentry.addedDate = datetime.now()
@@ -628,10 +669,19 @@ class DatabaseConnector:
         db.close()
         return error_result
     
+    def set_irc_nickname(self, oldnick, newnick):
+        db_logger.info("set_irc_nickname: oldnick=%s, newnick=%s", oldnick, newnick)
+        db.connect()
+        pl = Players.select().where(Players.ircName == oldnick).first()
+        if pl is not None:
+            pl.ircName = newnick
+            pl.save()
+        db.close()
+    
     def withdraw_player_from_pickup(self, user, gametypes:List[str] = None, chattype = None) -> bool:
         db_logger.info("remove_player_from_pickup: user=%s, gametypes=%s, chattype=%s", user, gametypes, chattype)
-        player = None        
-        result: bool = False   
+        player = None
+        result: bool = False
 
         db.connect()
 
@@ -656,46 +706,18 @@ class DatabaseConnector:
             self.delete_games_without_player()
         return result
     
-    def set_irc_nickname(self, oldnick, newnick):
-        db_logger.info("set_irc_nickname: oldnick=%s, newnick=%s", oldnick, newnick)
-        db.connect()
-        pl = Players.select().where(Players.ircName == oldnick).first()
-        if pl is not None:
-            pl.ircName = newnick
-            pl.save()
+    def toggle_player_bridge(self, user, chattype) -> tuple[str, str]:
+        #toggles if a player should be bridged to discord/irc
+        irc_name: str = ""
+        discord_name: str = ""
+
+        db.connect
+        player: Players = self.__get_player(user, chattype)
+        if player:
+            irc_name = player.ircName
+            discord_name = player.discordName
+            player.shouldBridge = not player.shouldBridge
+            player.save()
         db.close()
-        
-    def get_full_stats(self, player_name: str, chattype: str) -> dict:
-        db_logger.info("get_skill_stats: player=%s, chattype=%s", player_name, chattype)
-        skill_stats: List[dict] = []
-        stats = {}
-        stats_id: int = -1
-        db.connect()
-        player: Players = None
-
-        player = Players.select().where((Players.ircName == player_name)|(Players.discordName == player_name)).first()
-
-        if player is None:
-            if player_name.isdigit():
-                stats_id = int(player_name)
-        else:
-            stats_id = player.statsId
-        db.close()
-    
-        db_logger.info("get_skill_stats: player=%s, stats_id=%d", player, stats_id)
-
-        if stats_id != -1:
-            skill_stats = get_full_gamestats(stats_id)
-            stats = get_full_stats(stats_id)
-            if stats.get('player') is not None:
-                stats["skill_stats"] = skill_stats
-                if chattype == "irc":
-                    stats["player"]["colored_name"] = irc_colors(stats["player"]["nick"])
-                elif chattype == "discord":
-                    stats["player"]["colored_name"] = discord_colors(stats["player"]["nick"])
-                else:
-                    stats["player"]["colored_name"] = stats["player"]["stripped_nick"]
+        return irc_name, discord_name
             
-        return stats
-    
-    
