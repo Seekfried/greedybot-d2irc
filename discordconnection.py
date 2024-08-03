@@ -121,6 +121,11 @@ async def on_message(message):
     global thread_lock
     global bot
     
+    should_bridge = True
+        
+    if message.author.name in bot.muted_discord_users:
+        should_bridge = False
+
     # Don't reply to itself, except cup pictures
     if message.author == client.user:
         if len(message.attachments) > 0:
@@ -138,11 +143,12 @@ async def on_message(message):
     with thread_lock:
         print("[Discord] %s: %s" % (message.author.name, message.content.strip()))
     
-    content = message.clean_content
-    bot.ircconnect.send_my_message("<%s> %s" % (message.author.name, content))
+    if should_bridge:
+        content = message.clean_content
+        bot.ircconnect.send_my_message("<%s> %s" % (message.author.name, content))
 
-    for attachment in message.attachments:
-        bot.ircconnect.send_my_message("URL: " + attachment.url)
+        for attachment in message.attachments:
+            bot.ircconnect.send_my_message("URL: " + attachment.url)
 
     if message.content.startswith('!'):
         if settings["modrole"] in [y.name.lower() for y in message.author.roles]:

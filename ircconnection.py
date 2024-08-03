@@ -77,6 +77,11 @@ class IrcConnector(irc.bot.SingleServerIRCBot):
         author = event.source.nick
         #author = re.sub(r"(]|-|\\|[`*_{}[()#+.!])", r'\\\1', event.source.nick)
 
+        should_bridge = True
+        
+        if author in self.bot.muted_irc_users:
+            should_bridge = False
+
         with self.thread_lock:
             print("[IRC] " + "{:s} : {:s}".format(author,message))
         
@@ -85,13 +90,14 @@ class IrcConnector(irc.bot.SingleServerIRCBot):
                 self.bot.discordconnect.close()
                 return
 
-        if message.startswith('!'):            
-            self.bot.discordconnect.send_my_message("<"+ author + "> " + message)
+        if message.startswith('!'):
+            if should_bridge:
+                self.bot.discordconnect.send_my_message("<"+ author + "> " + message)
             if self.channels[event.target].is_oper(author):
                 self.bot.send_command(author, message, "irc", True)
             else:
                 self.bot.send_command(author, message, "irc", False)            
-        else:
+        elif should_bridge:
             self.bot.discordconnect.send_my_message_with_mention("<"+ author + "> " + message)
     
     def run(self):
