@@ -26,7 +26,10 @@ class FriedyBot:
         self.discordconnect = None
         self.thread_lock = None
         self.topic = ""
-        self.dbconnect = DatabaseConnector()
+        self.dbconnect = DatabaseConnector()        
+        self.muted_discord_users = []
+        self.muted_irc_users = []
+        self.muted_discord_users, self.muted_irc_users = self.dbconnect.get_unbridged_players()
 
     def run(self):
         self.thread_lock = threading.Lock()
@@ -120,6 +123,7 @@ class FriedyBot:
     def change_name(self, oldnick, newnick):
         #changes irc-name of users in case of nickname changes
         logger.info("change_name: oldnick=%s, newnick=%s", oldnick, newnick)
+        self.muted_irc_users = [newnick if x==oldnick else x for x in self.muted_irc_users]
         self.dbconnect.set_irc_nickname(oldnick, newnick)
 
     def remove_user_on_exit(self, user,chattype):
@@ -417,7 +421,29 @@ class FriedyBot:
     def command_bridge(self, user, argument, chattype, isadmin):
         #toggle on/off if specific user-messages should be bridged (future)
         logger.info("command_bridge: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
-        #TODO: implement bridge command
+        irc_name: str = ""
+        discord_name: str = ""
+        irc_name, discord_name = self.dbconnect.toggle_player_bridge(user, chattype)
+
+        if chattype == "irc":
+            if user in self.muted_irc_users:
+                self.muted_irc_users.remove(user)
+                self.muted_discord_users.remove(discord_name)
+                self.send_notice(user, "Your Message are now bridged to discord.", chattype)
+            else:
+                self.muted_irc_users.append(user)
+                self.muted_discord_users.append(discord_name)
+                self.send_notice(user, "Your Message are now not bridged to discord.", chattype)
+        else:    
+            if user.name in self.muted_discord_users:
+                self.muted_discord_users.remove(user.name)
+                self.muted_irc_users.remove(irc_name)
+                self.send_notice(user, "Your Message are now bridged to irc.", chattype)
+            else:
+                self.muted_discord_users.append(user.name)
+                self.muted_irc_users.append(irc_name)
+                self.send_notice(user, "Your Message are now not bridged to irc.", chattype)
+
     
     def command_cupstart(self, user, argument, chattype, isadmin):
         #creates cup brackets and uploads to discord
