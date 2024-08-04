@@ -180,55 +180,56 @@ class DatabaseConnector:
         
         #check where user added from
         player = self.__get_player(user,chattype)
+        try:
+            #!add without gametype
+            if player:
+                if len(gametypes) == 0:
+                    games = self.__get_active_games()
 
-        #!add without gametype
-        if player:
-            if len(gametypes) == 0:
-                games = self.__get_active_games()
-
-                #no pickup game found and show possible gametypes
-                if not games.exists():
-                    gametype_result = []
-                    for gametype in GameTypes:
-                        gametype_result.append(gametype.title)
-                    error_message.append("No game found! Possible gametypes: " + ", ".join(gametype_result))
-                #adds to all current active pickup games
-                else:
-                    for game in games:
-                        pickentry = PickupEntries.select().where(PickupEntries.playerId == player.id, PickupEntries.gameId == game.id).first()
-                        if pickentry is None:
-                            pickentry = PickupEntries(playerId=player.id, gameId=game.id, addedFrom=chattype)
-                            pickentry.save()
-                            result = True
-                            found = self.__get_found_matchtext(game)
-                            if found_match is None or found and found["playercount"] > found_match["playercount"]:
-                                found_match = found
-                        else:
-                            error_message.append("Already added for " + pickentry.gameId.gametypeId.title)
-            #add with gametypes
-            #example: !add duel 2v2tdm
-            else:
-                for gtypeentries in gametypes:
-                    gtype = GameTypes.select().where(GameTypes.title == gtypeentries).first()
-                    if gtype is not None:
-                        game = PickupGames.select().where(PickupGames.gametypeId == gtype.id, PickupGames.isPlayed == False).first()
-                        if game is None:
-                            game = PickupGames(gametypeId=gtype.id, isPlayed=False)
-                            game.save()
-                        pickentry = PickupEntries.select().where(PickupEntries.playerId == player.id, PickupEntries.gameId == game.id).first()
-                        if pickentry is None:
-                            pickentry = PickupEntries(playerId=player.id, gameId=game.id, addedFrom=chattype)
-                            pickentry.save()
-                            result = True
-                            found = self.__get_found_matchtext(game)
-                            if found:
+                    #no pickup game found and show possible gametypes
+                    if not games.exists():
+                        gametype_result = []
+                        for gametype in GameTypes:
+                            gametype_result.append(gametype.title)
+                        error_message.append("No game found! Possible gametypes: " + ", ".join(gametype_result))
+                    #adds to all current active pickup games
+                    else:
+                        for game in games:
+                            pickentry = PickupEntries.select().where(PickupEntries.playerId == player.id, PickupEntries.gameId == game.id).first()
+                            if pickentry is None:
+                                pickentry = PickupEntries(playerId=player.id, gameId=game.id, addedFrom=chattype)
+                                pickentry.save()
+                                result = True
+                                found = self.__get_found_matchtext(game)
                                 if not found_match or (found["playercount"] > found_match["playercount"]):
-                                    found_match = found
-                        else:
-                            error_message.append("Already added for " + pickentry.gameId.gametypeId.title)
-        else:
-            error_message.append("You need to register first (!register) to add for games!")
-
+                                    found_match = deepcopy(found)
+                            else:
+                                error_message.append("Already added for " + pickentry.gameId.gametypeId.title)
+                #add with gametypes
+                #example: !add duel 2v2tdm
+                else:
+                    for gtypeentries in gametypes:
+                        gtype = GameTypes.select().where(GameTypes.title == gtypeentries).first()
+                        if gtype is not None:
+                            game = PickupGames.select().where(PickupGames.gametypeId == gtype.id, PickupGames.isPlayed == False).first()
+                            if game is None:
+                                game = PickupGames(gametypeId=gtype.id, isPlayed=False)
+                                game.save()
+                            pickentry = PickupEntries.select().where(PickupEntries.playerId == player.id, PickupEntries.gameId == game.id).first()
+                            if pickentry is None:
+                                pickentry = PickupEntries(playerId=player.id, gameId=game.id, addedFrom=chattype)
+                                pickentry.save()
+                                result = True
+                                found = self.__get_found_matchtext(game)
+                                if found:
+                                    if not found_match or (found["playercount"] > found_match["playercount"]):
+                                        found_match = deepcopy(found)
+                            else:
+                                error_message.append("Already added for " + pickentry.gameId.gametypeId.title)
+            else:
+                error_message.append("You need to register first (!register) to add for games!")
+        except Exception as e:
+            db_logger.error("Something wrong with add_player_to_games: ", e)
         db.close()
         return result, error_message, found_match
     
@@ -570,59 +571,76 @@ class DatabaseConnector:
                 pl = None
                 if xonstatsname is None:
                     error_result = "No Player with this ID"
-                    return
-                if chattype == "irc":
-                    irc_player = Players.select().where(Players.ircName == user).first()
-                    pl = Players.select().where(Players.statsId == xonstatId).first()
-                    if pl is None and irc_player is None:
-                        pl = Players(ircName = user, 
-                                     statsId = xonstatId, 
-                                     statsName = xonstatsname, 
-                                     statsIRCName = irc_colors(xonstatscoloredname), 
-                                     statsDiscordName = discord_colors(xonstatscoloredname))
-                        pl.save()
-                        irc_name = pl.statsIRCName
-                        discord_name = pl.statsDiscordName
-                    else:
-                        if irc_player == pl:
-                            error_result = "Already registered with Xonstat account #" + xonstatId
-                        if irc_player and pl is None:
-                            irc_player.statsName = xonstatsname
-                            irc_player.statsId = xonstatId
-                            irc_player.statsIRCName = irc_colors(xonstatscoloredname)
-                            irc_player.statsDiscordName = discord_colors(xonstatscoloredname)
-                            irc_player.save()
-                            irc_name = irc_player.statsIRCName
-                            discord_name = irc_player.statsDiscordName
-                        else:
-                            error_result = "Another player is registered with Xonstat account #" + xonstatId
                 else:
-                    discord_player = Players.select().where(Players.discordName == user.name).first()
-                    pl = Players.select().where(Players.statsId == xonstatId).first()
-                    if pl is None and discord_player is None:
-                        pl = Players(discordName = user.name, 
-                                     discordMention = user.mention, 
-                                     statsId = xonstatId, 
-                                     statsName = xonstatsname, 
-                                     statsIRCName = irc_colors(xonstatscoloredname), 
-                                     statsDiscordName = discord_colors(xonstatscoloredname))
-                        pl.save()
-                        irc_name = pl.statsIRCName
-                        discord_name = pl.statsDiscordName
-                        
-                    else:
-                        if discord_player == pl:
-                            error_result = "Already registered with Xonstat account #" + xonstatId
-                        if discord_player and pl is None:
-                            discord_player.statsId = xonstatId
-                            discord_player.statsName = xonstatsname
-                            discord_player.statsIRCName = irc_colors(xonstatscoloredname)
-                            discord_player.statsDiscordName = discord_colors(xonstatscoloredname)
-                            discord_player.save()
-                            irc_name = discord_player.statsIRCName
-                            discord_name = discord_player.statsDiscordName
+                    if chattype == "irc":
+                        irc_player: Players = Players.select().where(Players.ircName == user).first()
+                        pl: Players = Players.select().where(Players.statsId == xonstatId).first()
+                        if pl is None and irc_player is None:
+                            pl = Players(ircName = user, 
+                                        statsId = xonstatId, 
+                                        statsName = xonstatsname, 
+                                        statsIRCName = irc_colors(xonstatscoloredname), 
+                                        statsDiscordName = discord_colors(xonstatscoloredname))
+                            pl.save()
+                            irc_name = pl.statsIRCName
+                            discord_name = pl.statsDiscordName
                         else:
-                            error_result = "Another player is registered with Xonstat account #" + xonstatId
+                            if irc_player == pl:
+                                error_result = "Already registered with Xonstat account #" + xonstatId
+                            if irc_player and pl is None:
+                                irc_player.statsName = xonstatsname
+                                irc_player.statsId = xonstatId
+                                irc_player.statsIRCName = irc_colors(xonstatscoloredname)
+                                irc_player.statsDiscordName = discord_colors(xonstatscoloredname)
+                                irc_player.save()
+                                irc_name = irc_player.statsIRCName
+                                discord_name = irc_player.statsDiscordName
+                            else:
+                                if pl.ircName:
+                                    error_result = "Another player is registered with Xonstat account #" + xonstatId
+                                else:
+                                    irc_player.ircName = None
+                                    irc_player.save()
+                                    pl.ircName = user
+                                    pl.save()
+                                    irc_name = pl.statsIRCName
+                                    discord_name = pl.statsDiscordName
+                    else:
+                        discord_player: Players = Players.select().where(Players.discordName == user.name).first()
+                        pl: Players = Players.select().where(Players.statsId == xonstatId).first()
+                        if pl is None and discord_player is None:
+                            pl = Players(discordName = user.name, 
+                                        discordMention = user.mention, 
+                                        statsId = xonstatId, 
+                                        statsName = xonstatsname, 
+                                        statsIRCName = irc_colors(xonstatscoloredname), 
+                                        statsDiscordName = discord_colors(xonstatscoloredname))
+                            pl.save()
+                            irc_name = pl.statsIRCName
+                            discord_name = pl.statsDiscordName                            
+                        else:
+                            if discord_player == pl:
+                                error_result = "Already registered with Xonstat account #" + xonstatId
+                            if discord_player and pl is None:
+                                discord_player.statsId = xonstatId
+                                discord_player.statsName = xonstatsname
+                                discord_player.statsIRCName = irc_colors(xonstatscoloredname)
+                                discord_player.statsDiscordName = discord_colors(xonstatscoloredname)
+                                discord_player.save()
+                                irc_name = discord_player.statsIRCName
+                                discord_name = discord_player.statsDiscordName
+                            else:
+                                if pl.discordName:
+                                    error_result = "Another player is registered with Xonstat account #" + xonstatId
+                                else:
+                                    discord_player.discordName = None
+                                    discord_player.discordMention = None
+                                    discord_player.save()
+                                    pl.discordName = user.name
+                                    pl.discordMention = user.mention
+                                    pl.save()
+                                    irc_name = pl.statsIRCName
+                                    discord_name = pl.statsDiscordName
             except Exception as e:
                 db_logger.error("Error in command_register: ", e, "Reason: ", e.args)
                 error_result = "Problem with XonStats"
