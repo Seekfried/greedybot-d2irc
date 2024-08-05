@@ -1,10 +1,12 @@
 import logging
 import discord
 import asyncio
+from utils import create_logger
 
 # Based on discordc.py from https://github.com/milandamen/Discord-IRC-Python
 
-logging.basicConfig(level=logging.INFO)
+#logging.basicConfig(level=logging.INFO)
+logger = create_logger("discordconnection", logging.INFO)
 
 thread_lock = None
 

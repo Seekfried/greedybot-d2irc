@@ -12,8 +12,9 @@ from ircconnection import IrcConnector
 from discordconnection import DiscordConnector
 from dbconnection import DatabaseConnector
 from xonotic.utils import get_quote
+from utils import create_logger
 
-logger = logging.getLogger("friedybot")
+logger = create_logger("friedybot")
 
 class FriedyBot:
     def __init__(self, settings, cmdresults, xonotic):

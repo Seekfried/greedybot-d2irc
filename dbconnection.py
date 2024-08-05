@@ -4,8 +4,9 @@ import logging
 from xonotic.utils import *
 from datetime import datetime
 from copy import deepcopy
+from utils import create_logger
 
-db_logger = logging.getLogger("dbConnector")
+db_logger = create_logger("dbConnector")
 
 class DatabaseConnector:
     
