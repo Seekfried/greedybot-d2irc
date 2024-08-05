@@ -14,28 +14,12 @@ A pickupbot for managing Xonotic pickup games
 Download the code from this repository and configure setting.json (see [Configuration](https://github.com/Seekfried/friedybot-d2irc#configuration))
 
 Install python dependencies
-```python
+```bash
 pip install -r requirements.txt
 ```
 
-Create database (**pickups.db**)
-```python
-python setupdb.py --createdb
-```
-
-*Optional*: import gametypes from gametypes.json
-```python
-python setupdb.py --creategametypes
-```
-
-Other options for setupdb.py:
-```python
-python setupdb.py --deletegametypes #Delete gametypes from database
-python setupdb.py --deletepickups   #Delete past pickupgames from database
-```
-
 And run the bot:
-```python
+```bash
 python startbot.py
 ```
 
@@ -105,16 +89,16 @@ There are three other different setting files:
 - **!bridge**: Switch bridge functionality on or off (for yourself)
 
 ### Admin/Moderator commands
-*For discord-users with the role specific to settings.json (modrole) or IRC-users with OP*
-- **!pull**: remove specific player from pickup games: !pull \[\<players>]
-- **!addgametype**: To add gametype: !addgametype \<gametypename> \<playercount> \<teamcount> \<statsname>
-- **!addserver**: To add server: !addserver \<servername> \<ip:port>
-- **!removegametype**: To delete gametype: !removegametype \[\<gametypename>]
-- **!removeserver**: To delete server: !removeserver \[\<servername>]
+*For discord-users with the role specific to `settings.json` (modrole) or IRC-users with OP*
+- **!pull**: remove specific player from pickup games: `!pull [<players>]`
+- **!addgametype**: To add gametype: `!addgametype <gametypename> <playercount> <teamcount> <statsname>`
+- **!addserver**: To add server: `!addserver <servername> <ip:port>`
+- **!removegametype**: To delete gametype: `!removegametype [<gametypename>]`
+- **!removeserver**: To delete server: `!removeserver [<servername>]`
 
 ### Cup Generation
 - at the moment just direct cup generation with **!cupstart** (future feature -> with player signing in themselves)
-- **!cupstart**: To generate cup brackets: !cupstart \<cuptitle> \[\<players/teams>]
+- **!cupstart**: To generate cup brackets: `!cupstart <cuptitle> [<players/teams>]`
 
 **example: !cupstart seeky-cup grunt hotdog ramses packer mirio**
 
