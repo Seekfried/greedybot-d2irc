@@ -1,13 +1,15 @@
 import irc.bot
 import re
+from utils import create_logger
+
+logger = create_logger(__name__)
 
 # Based on ircc.py from https://github.com/milandamen/Discord-IRC-Python
 
 
 class IrcConnector(irc.bot.SingleServerIRCBot):    
-    def __init__(self, settings, lock, fbot):
+    def __init__(self, settings, fbot):
         self.settings = settings
-        self.thread_lock = lock
         self.bot = fbot        
         self.running = True
         self.connection = None
@@ -65,12 +67,10 @@ class IrcConnector(irc.bot.SingleServerIRCBot):
         self.connection.privmsg("Q@CServe.quakenet.org", "AUTH " + self.settings["nickname"] + " " + self.settings["password"] )
         connection.join(channel)
         
-        with self.thread_lock:
-            print("[IRC] Connected to server")
+        logger.info("[IRC] Connected to server")
     
     def on_join(self, connection, event):
-        with self.thread_lock:
-            print("[IRC] Connected to channel")
+        logger.info("[IRC] Connected to channel")
     
     def on_pubmsg(self, connection, event):
         message = event.arguments[0].strip()
@@ -82,8 +82,7 @@ class IrcConnector(irc.bot.SingleServerIRCBot):
         if author in self.bot.muted_irc_users:
             should_bridge = False
 
-        with self.thread_lock:
-            print("[IRC] " + "{:s} : {:s}".format(author,message))
+        logger.info("[IRC] " + "{:s} : {:s}".format(author,message))
         
         if event.source.nick == self.settings["botowner"]:
             if event.arguments[0].strip() == "!quit":
@@ -105,6 +104,6 @@ class IrcConnector(irc.bot.SingleServerIRCBot):
         
         if self.running:
             self.running = False
-            ircc = IrcConnector(self.settings, self.thread_lock, self.bot)
+            ircc = IrcConnector(self.settings, self.bot)
             self.bot.ircconnect = ircc
             ircc.run()
