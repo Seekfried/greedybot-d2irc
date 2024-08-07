@@ -8,8 +8,6 @@ from utils import create_logger
 #logging.basicConfig(level=logging.INFO)
 logger = create_logger("discordconnection", logging.INFO)
 
-thread_lock = None
-
 settings = None
 intents = discord.Intents.default()
 intents.message_content = True
@@ -23,13 +21,11 @@ channel = None
 bot = None
 
 class DiscordConnector:
-    def __init__(self, sett, lock, fbot):
+    def __init__(self, sett, fbot):
         global settings
-        global thread_lock
         global bot
         
         settings = sett
-        thread_lock = lock
         bot = fbot
         
         if not settings["token"]:
@@ -118,7 +114,6 @@ async def on_message(message):
     global settings
     global client
     global channel
-    global thread_lock
     global bot
     
     should_bridge = True
@@ -167,7 +162,6 @@ async def on_presence_update(before, after):
 async def on_ready():
     global server
     global channel
-    global thread_lock
     
 
     logger.info("[Discord] Logged in as:")

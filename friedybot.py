@@ -25,7 +25,6 @@ class FriedyBot:
         self.xonotic = xonotic
         self.ircconnect = None
         self.discordconnect = None
-        self.thread_lock = None
         self.topic = ""
         self.dbconnect = DatabaseConnector()        
         self.muted_discord_users = []
@@ -33,9 +32,8 @@ class FriedyBot:
         self.muted_discord_users, self.muted_irc_users = self.dbconnect.get_unbridged_players()
 
     def run(self):
-        self.thread_lock = threading.Lock()
-        self.ircconnect = IrcConnector(self.settings["irc"], self.thread_lock, self)
-        self.discordconnect = DiscordConnector(self.settings["discord"], self.thread_lock, self)
+        self.ircconnect = IrcConnector(self.settings["irc"], self)
+        self.discordconnect = DiscordConnector(self.settings["discord"], self)
 
         t1 = threading.Thread(target=self.ircconnect.run)
         t1.daemon = True                                    # Thread dies when main thread (only non-daemon thread) exits.
@@ -92,12 +90,11 @@ class FriedyBot:
         argument = argument.split()
         method_name = 'command_' + str(argument[0][1:].lower())
         method = getattr(self, method_name, self.wrong_command)
-        with self.thread_lock:
-            try:
-                method(user, argument, chattype, isadmin)
-            except Exception as e:
-                self.send_notice(user, "Sorry, something went wrong", chattype)
-                logger.error("Error in command:", e)
+        try:
+            method(user, argument, chattype, isadmin)
+        except Exception as e:
+            self.send_notice(user, "Sorry, something went wrong", chattype)
+            logger.error("Error in command:", e)
 
     def send_notice(self, user, message, chattype):
         #sends message to only discord or to specific irc-user (for future: send direct message to discord-user)
