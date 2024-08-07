@@ -176,10 +176,10 @@ def get_full_gamestats(id) -> List[dict]:
         return []
     return game_stats
 
-def get_serverinfo(serverip:str) -> list[str]:
+def get_serverinfo(serverip:str) -> List[str]:
     URL = "https://xonotic.lifeisabug.com/"
     result: bool = False
-    serverinfos: list[str] = []
+    serverinfos: List[str] = []
     try:
         page = requests.get(URL)
         soup = BeautifulSoup(page.content, "html.parser")
@@ -195,7 +195,7 @@ def get_serverinfo(serverip:str) -> list[str]:
         print("Server not online")
         return result, serverinfos
  
-def get_quote(playername:str = None) -> list[str]:
+def get_quote(playername:str = None) -> List[str]:
     URL = "http://devfull.de:27600/random"
     quotes = []
     lines = []

@@ -27,7 +27,7 @@ class DatabaseConnector:
             return PickupEntries.select().join(PickupGames).where(PickupGames.isPlayed == False).where(PickupEntries.playerId == player)
         return None
     
-    def __get_found_matchtext(self, puggame:PickupGames) -> dict:
+    def __get_found_matchtext(self, puggame:PickupGames, forcedstart: bool = False) -> dict:
         #excutes in case match is found and sends notification to all players
         result = {}
         has_teams: bool = False
@@ -37,7 +37,7 @@ class DatabaseConnector:
         db_logger.info("found_match: puggame=%s", puggame)
         pugplayers = PickupEntries.select().where(PickupEntries.gameId == puggame.id)
         db_logger.info("found_match: pugplayers.count()=%s", pugplayers.count())
-        if pugplayers.count() == puggame.gametypeId.playerCount:
+        if pugplayers.count() == puggame.gametypeId.playerCount or forcedstart:
             puggame.isPlayed = True
             puggame.save()
             if puggame.gametypeId.playerCount == puggame.gametypeId.teamCount or puggame.gametypeId.statsName is None:
@@ -175,7 +175,7 @@ class DatabaseConnector:
         db.close()
         return message
 
-    def add_player_to_games(self, user, gametypes:List[str], chattype) -> tuple[bool, list[str], dict]:
+    def add_player_to_games(self, user, gametypes:List[str], chattype) -> tuple[bool, List[str], dict]:
         db_logger.info("add_player_to_games: user=%s, gametypes=%s, chattype=%s", user, gametypes, chattype)
         result: bool = False
         error_message = []
@@ -291,7 +291,7 @@ class DatabaseConnector:
                 game.delete_instance() 
         db.close()
     
-    def delete_gametypes(self, gametypes) -> list[str]:
+    def delete_gametypes(self, gametypes) -> List[str]:
         messages = []
 
         db.connect()
@@ -309,7 +309,7 @@ class DatabaseConnector:
         db.close()
         return messages
 
-    def delete_server(self, serverlist) -> list[str]:
+    def delete_server(self, serverlist) -> List[str]:
         messages = []
 
         db.connect()
@@ -327,7 +327,7 @@ class DatabaseConnector:
         db.close()
         return messages
 
-    def delete_subscription(self, user, gametypetitle, chattype) -> list[str]:
+    def delete_subscription(self, user, gametypetitle, chattype) -> List[str]:
         discord_name: str = ""
         message: str = ""
 
@@ -462,9 +462,9 @@ class DatabaseConnector:
         db.close()
         return wrong_server, result
     
-    def get_server_info(self, servername) -> tuple[bool, list[str]]:
+    def get_server_info(self, servername) -> tuple[bool, List[str]]:
         #TODO use rcon in future
-        messages: list[str] = []
+        messages: List[str] = []
         wrong_server: bool = False
         result: bool = False
 
@@ -491,8 +491,8 @@ class DatabaseConnector:
         db.close()
         return result
 
-    def get_subscriptions(self, user, chattype) -> list[str]:
-        subs: list[str] = []
+    def get_subscriptions(self, user, chattype) -> List[str]:
+        subs: List[str] = []
 
         db.connect()
         player = self.__get_player(user, chattype)
@@ -660,6 +660,7 @@ class DatabaseConnector:
         return error_result, discord_name, irc_name
     
     def renew_pickupentry(self, user, gametypes, chattype) -> str:
+        db_logger.info("renew_pickupentry: user=%s, gametypes=%s, chattype=%s", user, gametypes, chattype)
         gameentries = None
         player = None
         error_result: str = ""
@@ -697,7 +698,7 @@ class DatabaseConnector:
         db.close()
         return error_result
     
-    def set_irc_nickname(self, oldnick, newnick):
+    def set_irc_nickname(self, oldnick:str, newnick:str):
         db_logger.info("set_irc_nickname: oldnick=%s, newnick=%s", oldnick, newnick)
         db.connect()
         pl = Players.select().where(Players.ircName == oldnick).first()
@@ -705,6 +706,28 @@ class DatabaseConnector:
             pl.ircName = newnick
             pl.save()
         db.close()
+
+    def start_pickupgame(self, gametypetitle:str) -> str:
+        db_logger.info("start_pickupgame: gametypetitle=%s", gametypetitle)
+        result: bool = False
+        error_message: str = ""
+        found_match = {}
+
+        db.connect()
+        active_games: PickupGames = self.__get_active_games()
+        if active_games.exists():
+            starting_game = active_games.join(GameTypes).where(GameTypes.title == gametypetitle).first()
+            if starting_game:
+                result = True
+                found_match = self.__get_found_matchtext(starting_game, True)
+            else:
+                error_message = "No active pickup game found for gametype: " + gametypetitle
+        else:
+            error_message = "No active pickup game found!"
+
+        db.close()
+        return result, error_message, found_match
+
     
     def withdraw_player_from_pickup(self, user, gametypes:List[str] = None, chattype = None) -> bool:
         db_logger.info("remove_player_from_pickup: user=%s, gametypes=%s, chattype=%s", user, gametypes, chattype)
@@ -735,7 +758,8 @@ class DatabaseConnector:
         return result
     
     def toggle_player_bridge(self, user, chattype) -> tuple[str, str]:
-        #toggles if a player should be bridged to discord/irc
+        #toggles if a player should be bridged to discord/irc        
+        db_logger.info("toggle_player_bridge: user=%s, chattype=%s", user, chattype)
         irc_name: str = ""
         discord_name: str = ""
 

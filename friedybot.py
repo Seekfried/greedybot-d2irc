@@ -193,9 +193,9 @@ class FriedyBot:
         # command to add player to pickup games
         logger.info("command_add: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
         result: bool = False
-        error_messages: list[str] = []
+        error_messages: List[str] = []
         found_match: dict = {}
-        gametypes: list[str] = argument[1:]
+        gametypes: List[str] = argument[1:]
 
         result, error_messages, found_match = self.dbconnect.add_player_to_games(user, gametypes, chattype)
         if result:
@@ -259,7 +259,7 @@ class FriedyBot:
         
     def command_renew(self, user, argument, chattype, isadmin):
         logger.info("command_renew: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
-        gametypes: list[str] = argument[1:]
+        gametypes: List[str] = argument[1:]
         error_message: str = ""
 
         error_message = self.dbconnect.renew_pickupentry(user, gametypes, chattype)
@@ -455,6 +455,7 @@ class FriedyBot:
         self.send_all("Generate Cup...")
 
     def command_online(self, user, argument, chattype, isadmin):
+        #List all current online discord-members for irc-users and vice versa
         logger.info("command_online: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
 
         if chattype == "irc":
@@ -463,11 +464,14 @@ class FriedyBot:
             self.discordconnect.send_my_message("Online are: " + ", ".join(self.ircconnect.get_online_users()))
 
     def command_lastgame(self, user, argument, chattype, isadmin):
+        #Show the last played pickupgame with date and players
         logger.info("command_lastgame: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
         result = self.dbconnect.get_lastgame(chattype)       
         self.send_notice(user, result, chattype)
         
     def command_subscribe(self, user, argument, chattype, isadmin):
+        #Add to subscription to a specific gametype to get notified in !promote command
+        #example: !subscribe 2v2tdm
         logger.info("command_subscribe: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
         result: bool = False
         message: str = ""
@@ -497,6 +501,8 @@ class FriedyBot:
                 self.command_pickups(user, argument, chattype, isadmin)
 
     def command_unsubscribe(self, user, argument, chattype, isadmin):
+        #Remove from all gametype subscriptions or specific gametype subscription        
+        #example: !unsubscribe 2v2tdm
         logger.info("command_unsubscribe: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
         gametype_args = set(argument[1:])
         message: str = ""
@@ -529,8 +535,9 @@ class FriedyBot:
             self.send_notice(user, "You are subscribed to nothing!", chattype)
 
     def command_promote(self, user, argument, chattype, isadmin):
+        #Notify all players to gametype specific pickupgame
+        #example: !promote 2v2tdm
         logger.info("command_promote: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
-        #TODO promote for more than one gametype and also for irc
         gametype_args = set(argument[1:])
         active_games_and_player: dict = self.dbconnect.get_active_games_and_players()
         notify_players: List[str] = []
@@ -548,6 +555,7 @@ class FriedyBot:
                 print("No active pickup found for: " + gametype)
 
     def command_info(self, user, argument, chattype, isadmin):
+        #Show xonstat information about one player per playername or xonstats-id
         logger.info("command_info: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
                     
         if len(argument) > 1:
@@ -573,14 +581,17 @@ class FriedyBot:
             self.send_notice(user, "No player given!", chattype)
 
     def command_quote(self, user, argument, chattype, isadmin):
+        #Get random quote from quoteDB or with playername from specific player
         logger.info("command_quote: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
-        quotelines: list[str] = []
+        quotelines: List[str] = []
         q_player: str = argument[1] if len(argument) > 1 else None
         quotelines = get_quote(q_player)
         for line in quotelines:
             self.send_all("Quote: \"" + line + "\"")
 
     def command_serverinfo(self, user, argument, chattype, isadmin):
+        #Get infos from server like name, map, player, gametype
+        #TODO at the moment just for public ipv4 servers -> in future with RCON
         logger.info("command_serverinfo: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
         server_infos = []
         resultText: str = ""
@@ -596,4 +607,23 @@ class FriedyBot:
             else:
                 for line in server_infos:
                     self.send_all(line)
+
+    def command_start(self, user, argument, chattype, isadmin):
+        #Force the start of a pickup game that doesn't have all the players yet
+        #example: !start 2v2tdm
+        logger.info("command_start: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
+        gametype: str = argument[1] if len(argument) > 1 else None
+
+        if gametype:
+            result, error_message, found_match = self.dbconnect.start_pickupgame(gametype)
+            if result:
+                if found_match["has_teams"]:
+                    for i in range(0,len(found_match["irc"])):
+                        self.send_all(found_match["discord"][i], found_match["irc"][i])
+                else:
+                    self.send_all(found_match["discord"], found_match["irc"])
+            else:
+                self.send_notice(user, error_message, chattype)
+        else:
+            self.send_notice(user, "You need to include a specific gametype!", chattype)
 

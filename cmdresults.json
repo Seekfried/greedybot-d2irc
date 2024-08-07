@@ -30,6 +30,7 @@
         "promote":"Notify all players to gametype specific pickupgame: !promote [<gametype>]",
         "lastgame":"Show the last played pickupgame with date and players: !lastgame",
         "quote":"Get random quote from quoteDB or with playername from specific player: !quote <playername>",
-        "serverinfo":"Get infos from server like name, map, player, gametype: !serverinfo <servername>"
+        "serverinfo":"Get infos from server like name, map, player, gametype: !serverinfo <servername>",
+        "start":"Force the start of a pickup game that doesn't have all the players yet: !start <gametype>"
     }
 }
