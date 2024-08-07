@@ -1,9 +1,7 @@
 import datetime
 from peewee import *
-from playhouse.sqliteq import SqliteQueueDatabase
 
 db = SqliteDatabase('pickups.db', pragmas={'foreign_keys': 1})
-#db = SqliteQueueDatabase('pickups.db', pragmas={'foreign_keys': 1}, autostart=False, queue_max_size=64, results_timeout=5.0, autoconnect=False)
 
 class Players(Model):
     ircName = CharField(unique=True, null=True)
@@ -29,7 +27,8 @@ class GameTypes(Model):
 
 class Servers(Model):
     serverName = CharField(unique=True)
-    serverIp = CharField(unique=True)
+    serverIPv4 = CharField(unique=True, null=True)
+    serverIPv6 = CharField(unique=True, null=True)
 
     class Meta:
         database = db
