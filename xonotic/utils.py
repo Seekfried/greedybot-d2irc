@@ -1,7 +1,6 @@
 import re
 import logging
 import requests
-from typing import List
 from bs4 import BeautifulSoup, element
 import random
 
@@ -163,9 +162,9 @@ def get_gamestats(id, gtype):
         return None
     return elo
 
-def get_full_gamestats(id) -> List[dict]:
+def get_full_gamestats(id) -> list[dict]:
     utils_logger.info("get_full_gamestats: id=%s", id)
-    game_stats: List[dict] = []
+    game_stats: list[dict] = []
     header = {'Accept': 'application/json'}
     response = requests.get("https://stats.xonotic.org/player/" + str(id) + "/skill", headers=header)
     utils_logger.info("get_full_stats: response.status_code=%s", response.status_code)
