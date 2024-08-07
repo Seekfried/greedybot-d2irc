@@ -33,8 +33,7 @@ class DiscordConnector:
         bot = fbot
         
         if not settings["token"]:
-            with thread_lock:
-                logger.error("[Discord] No token given. Get a token at https://discordapp.com/developers/applications/me")
+            logger.error("[Discord] No token given. Get a token at https://discordapp.com/developers/applications/me")
             exit()
     
     def send_my_message(self, message):
@@ -107,8 +106,7 @@ async def give_role_async(user, rolename):
             role = discord.utils.get(channel.guild.roles, name=rolename)
             await user.add_roles(role)
         except Exception as e:
-            with thread_lock:
-                logger.error("Error in give_role_async: ", e)
+            logger.error("Error in give_role_async: ", e)
 
 async def take_role_async(user, rolename):
     role = discord.utils.get(channel.guild.roles, name=rolename)
@@ -142,8 +140,7 @@ async def on_message(message):
             await client.close()
             return
 
-    with thread_lock:
-        logger.info("[Discord] %s: %s" % (message.author.name, message.content.strip()))
+    logger.info("[Discord] %s: %s" % (message.author.name, message.content.strip()))
     
     if should_bridge:
         content = message.clean_content
@@ -172,61 +169,61 @@ async def on_ready():
     global channel
     global thread_lock
     
-    with thread_lock:
-        logger.info("[Discord] Logged in as:")
-        logger.info("[Discord] " + client.user.name)
-        logger.info("[Discord] " + str(client.user.id))
+
+    logger.info("[Discord] Logged in as:")
+    logger.info("[Discord] " + client.user.name)
+    logger.info("[Discord] " + str(client.user.id))
+    
+    if len(client.guilds) == 0:
+        logger.warning("[Discord] Bot is not yet in any server.")
+        await client.close()
+        return
+    
+    if settings["server"] == "":
+        logger.error("[Discord] You have not configured a server to use in settings.json")
+        logger.error("[Discord] Please put one of the server IDs listed below in settings.json")
         
-        if len(client.guilds) == 0:
-            logger.warning("[Discord] Bot is not yet in any server.")
-            await client.close()
-            return
+        for server in client.guilds:
+            logger.info("[Discord] %s: %s" % (server.name, server.id))
         
-        if settings["server"] == "":
-            logger.error("[Discord] You have not configured a server to use in settings.json")
-            logger.error("[Discord] Please put one of the server IDs listed below in settings.json")
-            
-            for server in client.guilds:
-                logger.info("[Discord] %s: %s" % (server.name, server.id))
-            
-            await client.close()
-            return
+        await client.close()
+        return
+    
+    findServer = [x for x in client.guilds if str(x.id) == settings["server"]]
+    if not len(findServer):
+        logger.error("[Discord] No server could be found with the specified id: " + settings["server"])
+        logger.error("[Discord] Available servers:")
         
-        findServer = [x for x in client.guilds if str(x.id) == settings["server"]]
-        if not len(findServer):
-            logger.error("[Discord] No server could be found with the specified id: " + settings["server"])
-            logger.error("[Discord] Available servers:")
+        for server in client.guilds:
+            logger.error("[Discord] %s: %s" % (server.name, server.id))
             
-            for server in client.guilds:
-                logger.error("[Discord] %s: %s" % (server.name, server.id))
-                
-            await client.close()
-            return
+        await client.close()
+        return
+    
+    server = findServer[0]
+    
+    if settings["channel"] == "":
+        logger.error("[Discord] You have not configured a channel to use in settings.json")
+        logger.error("[Discord] Please put one of the channel IDs listed below in settings.json")
         
-        server = findServer[0]
+        for channel in server.channels:
+            if channel.type == discord.ChannelType.text:
+                logger.error("[Discord] %s: %s" % (channel.name, channel.id))
         
-        if settings["channel"] == "":
-            logger.error("[Discord] You have not configured a channel to use in settings.json")
-            logger.error("[Discord] Please put one of the channel IDs listed below in settings.json")
-            
-            for channel in server.channels:
-                if channel.type == discord.ChannelType.text:
-                    logger.error("[Discord] %s: %s" % (channel.name, channel.id))
-            
-            await client.close()
-            return
+        await client.close()
+        return
+    
+    findChannel = [x for x in server.channels if str(x.id) == settings["channel"] and x.type == discord.ChannelType.text]
+    if not len(findChannel):
+        logger.error("[Discord] No channel could be found with the specified id: " + settings["server"])
+        logger.error("[Discord] Note that you can only use text channels.")
+        logger.error("[Discord] Available channels:")
         
-        findChannel = [x for x in server.channels if str(x.id) == settings["channel"] and x.type == discord.ChannelType.text]
-        if not len(findChannel):
-            logger.error("[Discord] No channel could be found with the specified id: " + settings["server"])
-            logger.error("[Discord] Note that you can only use text channels.")
-            logger.error("[Discord] Available channels:")
-            
-            for channel in server.channels:
-                if channel.type == discord.ChannelType.text:
-                    logger.error("[Discord] %s: %s" % (channel.name, channel.id))
-            
-            await client.close()
-            return
+        for channel in server.channels:
+            if channel.type == discord.ChannelType.text:
+                logger.error("[Discord] %s: %s" % (channel.name, channel.id))
         
-        channel = findChannel[0]
+        await client.close()
+        return
+    
+    channel = findChannel[0]
