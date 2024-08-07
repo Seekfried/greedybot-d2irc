@@ -4,6 +4,7 @@ import logging
 from xonotic.utils import *
 from datetime import datetime
 from copy import deepcopy
+from peewee_migrate import Router
 
 db_logger = logging.getLogger("dbConnector")
 
@@ -11,6 +12,10 @@ class DatabaseConnector:
     
     def __init__(self):
         db_logger.info("Initialize db connection")
+        db.close()
+        router = Router(db)
+        router.run()
+        db.close()
         self.delete_active_games()
 
     def __get_active_games(self) -> PickupGames:
@@ -238,7 +243,7 @@ class DatabaseConnector:
 
         db.connect()
         try:
-            serv = Servers(serverName=servername, serverIp=serveraddress)
+            serv = Servers(serverName=servername, serverIPv4=serveraddress)
             serv.save()
             message = "Server " + servername + " added."
         except:
@@ -273,8 +278,9 @@ class DatabaseConnector:
     def delete_active_games(self):
         #Delete pickgames that were not played
         db.connect()
-        games = PickupGames.delete().where(PickupGames.isPlayed == False)
-        games.execute()
+        if PickupGames.table_exists():
+            games = PickupGames.delete().where(PickupGames.isPlayed == False)
+            games.execute()
         db.close()
     
     def delete_games_without_player(self):
@@ -448,7 +454,7 @@ class DatabaseConnector:
         else:
             server: Servers = Servers.select().where(Servers.serverName == servername).first()
             if server is not None:
-                result = "Server: " + server.serverName + " with IP: " + server.serverIp
+                result = "Server: " + server.serverName + " with IP: " + server.serverIPv4
             else:
                 wrong_server = True
                 result = "Server: " + servername + " not found!"
@@ -465,7 +471,7 @@ class DatabaseConnector:
         db.connect()
         server: Servers = Servers.select().where(Servers.serverName == servername).first()
         if server is not None:
-            result, messages = get_serverinfo(server.serverIp)
+            result, messages = get_serverinfo(server.serverIPv4)
             if not result:
                 messages = "Server: " + servername + " offline!"
                 wrong_server = True
@@ -501,6 +507,10 @@ class DatabaseConnector:
         muted_irc_users = []
 
         db.connect()
+        if not Players.table_exists():
+            db.close()
+            return muted_discord_users, muted_irc_users
+        
         players: List[Players] = Players.select().where(Players.shouldBridge == False)
         for player in players:
             if player.discordName:
