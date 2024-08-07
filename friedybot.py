@@ -1,6 +1,6 @@
 from unittest import result
 from bracket.bracketcreator import get_cuppicture
-from ipaddress import ip_address
+from ipaddress import ip_address, IPv4Address
 import threading
 import random
 from typing import List
@@ -303,6 +303,7 @@ class FriedyBot:
         message: str = ""
         server_name: str = argument[1] if len(argument) > 1 else None
         server_address: str = argument[2] if len(argument) > 2 else None
+        server_address2: str = argument[3] if len(argument) > 3 else None
         
         if isadmin:
             if server_address:            
