@@ -286,7 +286,7 @@ class FriedyBot:
         logger.info("command_server: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
         if len(argument) == 1:
             wrongs_server, resultText = self.dbconnect.get_server()
-            self.send_all("Available servers: " + resultText)
+            self.send_all(resultText)
 
         #shows specific servers from arguments
         #example: !server dogcity
