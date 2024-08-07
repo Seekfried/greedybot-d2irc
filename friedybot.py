@@ -3,9 +3,6 @@ from bracket.bracketcreator import get_cuppicture
 from ipaddress import ip_address
 import threading
 import random
-from typing import List
-import re
-import logging
 from datetime import datetime
 import time
 from ircconnection import IrcConnector
@@ -191,9 +188,9 @@ class FriedyBot:
         # command to add player to pickup games
         logger.info("command_add: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
         result: bool = False
-        error_messages: List[str] = []
+        error_messages: list[str] = []
         found_match: dict = {}
-        gametypes: List[str] = argument[1:]
+        gametypes: list[str] = argument[1:]
 
         result, error_messages, found_match = self.dbconnect.add_player_to_games(user, gametypes, chattype)
         if result:
@@ -257,7 +254,7 @@ class FriedyBot:
         
     def command_renew(self, user, argument, chattype, isadmin):
         logger.info("command_renew: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
-        gametypes: List[str] = argument[1:]
+        gametypes: list[str] = argument[1:]
         error_message: str = ""
 
         error_message = self.dbconnect.renew_pickupentry(user, gametypes, chattype)
@@ -538,8 +535,8 @@ class FriedyBot:
         logger.info("command_promote: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
         gametype_args = set(argument[1:])
         active_games_and_player: dict = self.dbconnect.get_active_games_and_players()
-        notify_players: List[str] = []
-        online_players: List[str] = self.ircconnect.get_online_users()
+        notify_players: list[str] = []
+        online_players: list[str] = self.ircconnect.get_online_users()
 
         for gametype in gametype_args:
             if gametype in active_games_and_player.keys():
@@ -560,7 +557,7 @@ class FriedyBot:
             player = argument[1]
             stats: dict = self.dbconnect.get_full_stats(player, chattype)
             if stats and stats["player"]:
-                skills_stats: List[dict] = stats["skill_stats"]
+                skills_stats: list[dict] = stats["skill_stats"]
                 
                 response: str = ("Player: " + stats["player"]["colored_name"] + " (" + str(stats["player"]["player_id"]) + "). " +
                                 "Joined: " + stats["player"]["joined_fuzzy"] + ". Games played: " + str(stats["games_played"]["overall"]["games"]) +
@@ -581,7 +578,7 @@ class FriedyBot:
     def command_quote(self, user, argument, chattype, isadmin):
         #Get random quote from quoteDB or with playername from specific player
         logger.info("command_quote: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
-        quotelines: List[str] = []
+        quotelines: list[str] = []
         q_player: str = argument[1] if len(argument) > 1 else None
         quotelines = get_quote(q_player)
         for line in quotelines:

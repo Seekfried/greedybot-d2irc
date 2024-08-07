@@ -1,6 +1,4 @@
 from model import *
-from typing import List
-import logging
 from xonotic.utils import *
 from datetime import datetime
 from copy import deepcopy
@@ -143,7 +141,7 @@ class DatabaseConnector:
         return matchtext
     
     def __delete_all_pickupgames_without_entries(self):
-        games: List[PickupGames] = self.__get_active_games()
+        games: list[PickupGames] = self.__get_active_games()
 
         for game in games:
             if len(game.addedplayers) == 0:
@@ -186,7 +184,7 @@ class DatabaseConnector:
         db.close()
         return message
 
-    def add_player_to_games(self, user, gametypes:List[str], chattype) -> tuple[bool, List[str], dict]:
+    def add_player_to_games(self, user, gametypes:list[str], chattype) -> tuple[bool, list[str], dict]:
         db_logger.info("add_player_to_games: user=%s, gametypes=%s, chattype=%s", user, gametypes, chattype)
         result: bool = False
         error_message = []
@@ -302,7 +300,7 @@ class DatabaseConnector:
                 game.delete_instance() 
         db.close()
     
-    def delete_gametypes(self, gametypes) -> List[str]:
+    def delete_gametypes(self, gametypes) -> list[str]:
         messages = []
 
         db.connect()
@@ -320,7 +318,7 @@ class DatabaseConnector:
         db.close()
         return messages
 
-    def delete_server(self, serverlist) -> List[str]:
+    def delete_server(self, serverlist) -> list[str]:
         messages = []
 
         db.connect()
@@ -338,7 +336,7 @@ class DatabaseConnector:
         db.close()
         return messages
 
-    def delete_subscription(self, user, gametypetitle, chattype) -> List[str]:
+    def delete_subscription(self, user, gametypetitle, chattype) -> list[str]:
         discord_name: str = ""
         message: str = ""
 
@@ -364,11 +362,11 @@ class DatabaseConnector:
         inner_result: dict = {"irc":[], "discord":[], "playercount":""}
 
         db.connect()
-        games: List[PickupGames] = self.__get_active_games()
+        games: list[PickupGames] = self.__get_active_games()
         if games.exists():
             for game in games:
                 result.update({game.gametypeId.title : deepcopy(inner_result) })
-                playerentries: List[PickupEntries] = game.addedplayers
+                playerentries: list[PickupEntries] = game.addedplayers
                 result[game.gametypeId.title]["playercount"] = "(" + str(len(playerentries)) + "/" + str(game.gametypeId.playerCount) + ")"
                 for playerentry in playerentries:
                     if playerentry.addedFrom == "irc":
@@ -381,7 +379,7 @@ class DatabaseConnector:
     
     def get_full_stats(self, player_name: str, chattype: str) -> dict:
         db_logger.info("get_skill_stats: player=%s, chattype=%s", player_name, chattype)
-        skill_stats: List[dict] = []
+        skill_stats: list[dict] = []
         stats = {}
         stats_id: int = -1
         db.connect()
@@ -412,7 +410,7 @@ class DatabaseConnector:
             
         return stats
 
-    def get_gametype_list(self) -> List[str]:
+    def get_gametype_list(self) -> list[str]:
         #Get a list of strings of all possible gametypes
         result = []
 
@@ -444,7 +442,7 @@ class DatabaseConnector:
         result: str = ""
 
         db.connect()
-        games: List[PickupGames] = self.__get_active_games()
+        games: list[PickupGames] = self.__get_active_games()
 
         for game in games:
             result += game.gametypeId.title + " (" + str(len(game.addedplayers)) + "/" + str(game.gametypeId.playerCount) + ") "
@@ -473,9 +471,9 @@ class DatabaseConnector:
         db.close()
         return wrong_server, result
     
-    def get_server_info(self, servername) -> tuple[bool, List[str]]:
+    def get_server_info(self, servername) -> tuple[bool, list[str]]:
         #TODO use rcon in future
-        messages: List[str] = []
+        messages: list[str] = []
         wrong_server: bool = False
         result: bool = False
 
@@ -492,8 +490,8 @@ class DatabaseConnector:
         db.close()
         return wrong_server, messages
     
-    def get_subscribed_players(self, gametypetitle:str) -> List[str]:
-        result: List[str] = []
+    def get_subscribed_players(self, gametypetitle:str) -> list[str]:
+        result: list[str] = []
 
         db.connect()
         subscripts = Subscriptions.select().join(GameTypes).where(GameTypes.title == gametypetitle)
@@ -502,8 +500,8 @@ class DatabaseConnector:
         db.close()
         return result
 
-    def get_subscriptions(self, user, chattype) -> List[str]:
-        subs: List[str] = []
+    def get_subscriptions(self, user, chattype) -> list[str]:
+        subs: list[str] = []
 
         db.connect()
         player = self.__get_player(user, chattype)
@@ -513,7 +511,7 @@ class DatabaseConnector:
         db.close()
         return subs
     
-    def get_unbridged_players(self) -> tuple[List[str], List[str]]:
+    def get_unbridged_players(self) -> tuple[list[str], list[str]]:
         muted_discord_users = []
         muted_irc_users = []
 
@@ -522,7 +520,7 @@ class DatabaseConnector:
             db.close()
             return muted_discord_users, muted_irc_users
         
-        players: List[Players] = Players.select().where(Players.shouldBridge == False)
+        players: list[Players] = Players.select().where(Players.shouldBridge == False)
         for player in players:
             if player.discordName:
                 muted_discord_users.append(player.discordName)
@@ -535,7 +533,7 @@ class DatabaseConnector:
         result: bool = False
 
         db.connect()
-        games: List[PickupGames] = self.__get_active_games()
+        games: list[PickupGames] = self.__get_active_games()
         result = games.exists()
         db.close()
         return result
@@ -740,7 +738,7 @@ class DatabaseConnector:
         return result, error_message, found_match
 
     
-    def withdraw_player_from_pickup(self, user, gametypes:List[str] = None, chattype = None) -> bool:
+    def withdraw_player_from_pickup(self, user, gametypes:list[str] = None, chattype = None) -> bool:
         db_logger.info("remove_player_from_pickup: user=%s, gametypes=%s, chattype=%s", user, gametypes, chattype)
         player = None
         result: bool = False

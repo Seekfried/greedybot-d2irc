@@ -1,7 +1,6 @@
 import re
 import logging
 import requests
-from typing import List
 from bs4 import BeautifulSoup, element
 import random
 
@@ -163,9 +162,9 @@ def get_gamestats(id, gtype):
         return None
     return elo
 
-def get_full_gamestats(id) -> List[dict]:
+def get_full_gamestats(id) -> list[dict]:
     utils_logger.info("get_full_gamestats: id=%s", id)
-    game_stats: List[dict] = []
+    game_stats: list[dict] = []
     header = {'Accept': 'application/json'}
     response = requests.get("https://stats.xonotic.org/player/" + str(id) + "/skill", headers=header)
     utils_logger.info("get_full_stats: response.status_code=%s", response.status_code)
@@ -176,10 +175,10 @@ def get_full_gamestats(id) -> List[dict]:
         return []
     return game_stats
 
-def get_serverinfo(serverip:str) -> List[str]:
+def get_serverinfo(serverip:str) -> list[str]:
     URL = "https://xonotic.lifeisabug.com/"
     result: bool = False
-    serverinfos: List[str] = []
+    serverinfos: list[str] = []
     try:
         page = requests.get(URL)
         soup = BeautifulSoup(page.content, "html.parser")
@@ -195,7 +194,7 @@ def get_serverinfo(serverip:str) -> List[str]:
         print("Server not online")
         return result, serverinfos
  
-def get_quote(playername:str = None) -> List[str]:
+def get_quote(playername:str = None) -> list[str]:
     URL = "http://devfull.de:27600/random"
     quotes = []
     lines = []
