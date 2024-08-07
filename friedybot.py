@@ -546,7 +546,7 @@ class FriedyBot:
                 for notify_player in notify_players:
                     self.send_notice(notify_player, notify_player + ": " + gametype + " " + active_games_and_player[gametype]["playercount"] + " please add!", "irc")
             else:
-                print("No active pickup found for: " + gametype)
+                logger.warning("No active pickup found for: " + gametype)
 
     def command_info(self, user, argument, chattype, isadmin):
         logger.info("command_info: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)

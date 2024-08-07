@@ -1,5 +1,8 @@
 import irc.bot
 import re
+from utils import create_logger
+
+logger = create_logger(__name__)
 
 # Based on ircc.py from https://github.com/milandamen/Discord-IRC-Python
 
@@ -66,11 +69,11 @@ class IrcConnector(irc.bot.SingleServerIRCBot):
         connection.join(channel)
         
         with self.thread_lock:
-            print("[IRC] Connected to server")
+            logger.info("[IRC] Connected to server")
     
     def on_join(self, connection, event):
         with self.thread_lock:
-            print("[IRC] Connected to channel")
+            logger.info("[IRC] Connected to channel")
     
     def on_pubmsg(self, connection, event):
         message = event.arguments[0].strip()
@@ -83,7 +86,7 @@ class IrcConnector(irc.bot.SingleServerIRCBot):
             should_bridge = False
 
         with self.thread_lock:
-            print("[IRC] " + "{:s} : {:s}".format(author,message))
+            logger.info("[IRC] " + "{:s} : {:s}".format(author,message))
         
         if event.source.nick == self.settings["botowner"]:
             if event.arguments[0].strip() == "!quit":
