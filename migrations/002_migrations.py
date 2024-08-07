@@ -17,7 +17,7 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
         for gametitle, gameinfo in gametypes:
             GameTypes.get_or_create(title=gametitle, playerCount=gameinfo["playerCount"], teamCount=gameinfo["teamCount"], statsName=gameinfo["statsName"])
     except Exception as e:
-        print('Error: %s', repr(e)) #("No table for gametypes found! Please execute 'createdb' first.")
+        print('Error: %s', repr(e))
   migrator.rename_column('servers', 'serverIp', 'serverIPv4')
   migrator.change_columns('servers', serverIPv4=pw.CharField(unique=True, null=True))
   migrator.add_fields('servers', serverIPv6=pw.CharField(unique=True, null=True))

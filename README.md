@@ -23,6 +23,9 @@ And run the bot:
 python startbot.py
 ```
 
+**NOTE**: In the first startup, it will create the `pickup.db` database file with the necessary tables. For
+that, it will also read the `gametypes.json` file to populate the database with the predefined gametypes.
+
 ## Configuration
 
 First you need to create a Discord bot user, which you can do by following the instructions [here](https://github.com/reactiflux/discord-irc/wiki/Creating-a-discord-bot-&-getting-a-token).

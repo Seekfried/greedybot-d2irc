@@ -243,7 +243,7 @@ class DatabaseConnector:
 
         db.connect()
         try:
-            serv = Servers(serverName=servername, serverIp=serveraddress)
+            serv = Servers(serverName=servername, serverIPv4=serveraddress)
             serv.save()
             message = "Server " + servername + " added."
         except:
@@ -454,7 +454,7 @@ class DatabaseConnector:
         else:
             server: Servers = Servers.select().where(Servers.serverName == servername).first()
             if server is not None:
-                result = "Server: " + server.serverName + " with IP: " + server.serverIp
+                result = "Server: " + server.serverName + " with IP: " + server.serverIPv4
             else:
                 wrong_server = True
                 result = "Server: " + servername + " not found!"
@@ -471,7 +471,7 @@ class DatabaseConnector:
         db.connect()
         server: Servers = Servers.select().where(Servers.serverName == servername).first()
         if server is not None:
-            result, messages = get_serverinfo(server.serverIp)
+            result, messages = get_serverinfo(server.serverIPv4)
             if not result:
                 messages = "Server: " + servername + " offline!"
                 wrong_server = True
