@@ -231,7 +231,7 @@ class FriedyBot:
         result = self.dbconnect.withdraw_player_from_pickup(user, gametypes, chattype)
         
         if result:            
-            return self.build_pickuptext() 
+            self.build_pickuptext() 
         else:
             self.send_notice(user, "No game added!", chattype)
 
@@ -620,6 +620,7 @@ class FriedyBot:
                         self.send_all(found_match["discord"][i], found_match["irc"][i])
                 else:
                     self.send_all(found_match["discord"], found_match["irc"])
+                self.build_pickuptext()
             else:
                 self.send_notice(user, error_message, chattype)
         else:

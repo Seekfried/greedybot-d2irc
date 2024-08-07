@@ -52,6 +52,7 @@ class DatabaseConnector:
                     else:
                         discordresult += pugplayer.playerId.discordMention + " (" + pugplayer.playerId.statsDiscordName + ") "
                         ircresult += pugplayer.playerId.discordName + " (" + pugplayer.playerId.statsIRCName + ") "
+                    self.__withdraw_player_from_all(pugplayer.playerId)
             else:
                 has_teams = True
                 team_result = self.__get_teamtext(pugplayers, puggame.gametypeId.teamCount, puggame.gametypeId.statsName)
@@ -60,6 +61,7 @@ class DatabaseConnector:
                 ircresult.insert(0, puggame.gametypeId.title + " ready! Players are: ")
                 discordresult.insert(0, puggame.gametypeId.title + " ready! Players are: ")
             result = {"has_teams": has_teams, "irc": ircresult, "discord": discordresult, "playercount": puggame.gametypeId.playerCount}
+            self.__delete_all_pickupgames_without_entries()
         return result
     
     def __get_player(self, user, chattype) -> Players:
@@ -84,6 +86,7 @@ class DatabaseConnector:
         players_with_elo = []
 
         for player_entry in players:
+            self.__withdraw_player_from_all(player_entry.playerId)
             if player_entry.playerId.statsId:
                 players_with_elo.append({"player": player_entry, "elo": get_gamestats(player_entry.playerId.statsId, xongametype)})
             else:
@@ -138,6 +141,13 @@ class DatabaseConnector:
         matchtext["irc"].append(captains_irc)
         matchtext["discord"].append(captains_discord)
         return matchtext
+    
+    def __delete_all_pickupgames_without_entries(self):
+        games: List[PickupGames] = self.__get_active_games()
+
+        for game in games:
+            if len(game.addedplayers) == 0:
+                game.delete_instance()        
         
     def __withdraw_player_from_all(self, player) -> bool:
         #check if player is already in database
