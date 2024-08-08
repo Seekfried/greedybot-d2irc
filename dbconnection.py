@@ -261,7 +261,6 @@ class DatabaseConnector:
         db.connect()
         try:
             serv = Servers(serverName=servername, serverIPv4=serveraddressIPv4, serverIPv6=serveraddressIPv6)
-            db_logger.info("add_server: serv=%s", serv)
             serv.save()
             message = "Server " + servername + " added."
         except:
