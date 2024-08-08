@@ -249,7 +249,7 @@ class DatabaseConnector:
     
     def add_server(self, servername: str, serveraddressIPv4: str, serveraddressIPv6: str) -> str:
         message = ""
-        
+        db_logger.info("add_server: servername=%s, serveraddressIPv4=%s, serveraddressIPv6=%s", servername, serveraddressIPv4, serveraddressIPv6)
         if not servername:
             db_logger.error("add_server: missing data: servername=%s", servername)
             return "Missing data! servername is required!"
@@ -261,6 +261,7 @@ class DatabaseConnector:
         db.connect()
         try:
             serv = Servers(serverName=servername, serverIPv4=serveraddressIPv4, serverIPv6=serveraddressIPv6)
+            db_logger.info("add_server: serv=%s", serv)
             serv.save()
             message = "Server " + servername + " added."
         except:
@@ -471,7 +472,7 @@ class DatabaseConnector:
         else:
             server: Servers = Servers.select().where(Servers.serverName == servername).first()
             if server is not None:
-                message = "Server: " + server.serverName + " with "
+                message = "Server: " + server.serverName + " with"
                 if server.serverIPv4:
                     message = message + " IPv4: " + server.serverIPv4
                 if server.serverIPv6:
