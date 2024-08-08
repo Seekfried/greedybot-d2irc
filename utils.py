@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+from ipaddress import ip_address, IPv4Address, IPv6Address
 
 class _ColourFormatter(logging.Formatter):
 
@@ -81,3 +82,27 @@ def create_logger(logger_name: str, level: int = logging.INFO) -> logging.Logger
     logger.addHandler(handler)
     logger.propagate = False
     return logger
+
+def sanitize_ip_and_port(ip_and_port: str) -> str:
+    sanitized_ip_and_port: str = ip_and_port.replace('[','').replace(']','')
+    ip = ":".join(sanitized_ip_and_port.split(":")[:-1])
+    port = sanitized_ip_and_port.split(":")[-1]
+    if not port.isdigit() and not (1024 <= int(port) <= 65535):
+        raise ValueError("Not a valid port! Ports must be integers between 1024 and 65535")
+    if not isinstance(ip_address(ip), (IPv4Address, IPv6Address)):
+        raise ValueError("Not a valid IP address!")
+    return sanitized_ip_and_port
+
+def is_ipv4_address(ip_and_port: str) -> bool:
+    ip = ":".join(ip_and_port.split(":")[:-1])
+    try:
+        return isinstance(ip_address(ip), IPv4Address)
+    except ValueError:
+        return False
+
+def is_ipv6_address(ip_and_port: str) -> bool:
+    ip = ":".join(ip_and_port.split(":")[:-1])
+    try:
+        return isinstance(ip_address(ip), IPv6Address)
+    except ValueError:
+        return False

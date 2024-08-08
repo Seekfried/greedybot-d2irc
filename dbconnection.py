@@ -247,12 +247,20 @@ class DatabaseConnector:
         db.close()
         return result, error_message, found_match
     
-    def add_server(self, servername, serveraddress) -> str:
+    def add_server(self, servername: str, serveraddressIPv4: str, serveraddressIPv6: str) -> str:
         message = ""
-
+        db_logger.info("add_server: servername=%s, serveraddressIPv4=%s, serveraddressIPv6=%s", servername, serveraddressIPv4, serveraddressIPv6)
+        if not servername:
+            db_logger.error("add_server: missing data: servername=%s", servername)
+            return "Missing data! servername is required!"
+            
+        if not serveraddressIPv4 and not serveraddressIPv6:
+            db_logger.error("add_server: missing data: serveraddressIPv4=%s, serveraddressIPv6=%s", serveraddressIPv4, serveraddressIPv6)
+            return "Missing data! serveraddressIPv4 or serveraddressIPv6 is required!"
+            
         db.connect()
         try:
-            serv = Servers(serverName=servername, serverIPv4=serveraddress)
+            serv = Servers(serverName=servername, serverIPv4=serveraddressIPv4, serverIPv6=serveraddressIPv6)
             serv.save()
             message = "Server " + servername + " added."
         except:
@@ -463,7 +471,12 @@ class DatabaseConnector:
         else:
             server: Servers = Servers.select().where(Servers.serverName == servername).first()
             if server is not None:
-                result = "Server: " + server.serverName + " with IP: " + server.serverIPv4
+                message = "Server: " + server.serverName + " with"
+                if server.serverIPv4:
+                    message = message + " IPv4: " + server.serverIPv4
+                if server.serverIPv6:
+                    message = message + " IPv6: " + server.serverIPv6
+                result = message
             else:
                 wrong_server = True
                 result = "Server: " + servername + " not found!"
@@ -480,7 +493,10 @@ class DatabaseConnector:
         db.connect()
         server: Servers = Servers.select().where(Servers.serverName == servername).first()
         if server is not None:
-            result, messages = get_serverinfo(server.serverIPv4)
+            if server.serverIPv4:
+                result, messages = get_serverinfo(server.serverIPv4)
+            if not result and server.serverIPv6:
+                result, messages = get_serverinfo(server.serverIPv6)
             if not result:
                 messages = "Server: " + servername + " offline!"
                 wrong_server = True

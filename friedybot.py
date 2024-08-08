@@ -1,6 +1,5 @@
 from unittest import result
 from bracket.bracketcreator import get_cuppicture
-from ipaddress import ip_address
 import threading
 import random
 from datetime import datetime
@@ -9,7 +8,7 @@ from ircconnection import IrcConnector
 from discordconnection import DiscordConnector
 from dbconnection import DatabaseConnector
 from xonotic.utils import get_quote
-from utils import create_logger
+from utils import create_logger, sanitize_ip_and_port, is_ipv4_address, is_ipv6_address
 
 logger = create_logger("friedybot")
 
@@ -283,7 +282,7 @@ class FriedyBot:
         logger.info("command_server: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
         if len(argument) == 1:
             wrongs_server, resultText = self.dbconnect.get_server()
-            self.send_all("Available servers: " + resultText)
+            self.send_all(resultText)
 
         #shows specific servers from arguments
         #example: !server dogcity
@@ -300,19 +299,26 @@ class FriedyBot:
         message: str = ""
         server_name: str = argument[1] if len(argument) > 1 else None
         server_address: str = argument[2] if len(argument) > 2 else None
+        server_address2: str = argument[3] if len(argument) > 3 else None
         
         if isadmin:
             if server_address:            
                 try:
-                    sanitized_ip_and_port: str = server_address.replace('[','').replace(']','')
-                    ip = ":".join(sanitized_ip_and_port.split(":")[:-1])
-                    port = sanitized_ip_and_port.split(":")[-1]
-                    logger.info("command_addserver: ip=%s, port=%s", ip, port)
-                    ip_address(ip)
-                    message = self.dbconnect.add_server(server_name, sanitized_ip_and_port)
+                    sanitized_ip_and_port1: str = sanitize_ip_and_port(server_address)
+                    sanitized_ip_and_port2: str = None
+                    if server_address2:
+                        sanitized_ip_and_port2: str = sanitize_ip_and_port(server_address2)
+                        if not ((is_ipv4_address(sanitized_ip_and_port1) and is_ipv6_address(sanitized_ip_and_port2)) or
+                                (is_ipv6_address(sanitized_ip_and_port1) and is_ipv4_address(sanitized_ip_and_port2))):
+                            self.send_notice(user, "Not a valid IP-addresses! When providing 2 IPs, one must be IPv4 and the other IPv6", chattype)
+                            raise ValueError("Not a valid IP-addresses! When providing 2 IPs, one must be IPv4 and the other IPv6")
+                    if is_ipv4_address(sanitized_ip_and_port1):
+                        message = self.dbconnect.add_server(server_name, sanitized_ip_and_port1, sanitized_ip_and_port2)
+                    else:
+                        message = self.dbconnect.add_server(server_name, sanitized_ip_and_port2, sanitized_ip_and_port1)
                     self.send_notice(user, message, chattype)
                 except ValueError:
-                    self.send_notice(user, "Not a valid IP-address! To add server: !addserver <servername> <ip:port>", chattype)
+                    self.send_notice(user, "Not a valid IP-address or port! To add server: !addserver <servername> <ip:port> [ <ip:port> ]", chattype)
             else:
                 self.send_notice(user, self.cmdresults["cmds"]["addserver"], chattype)
         else:

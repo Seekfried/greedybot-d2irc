@@ -96,7 +96,7 @@ There are three other different setting files:
 *For discord-users with the role specific to `settings.json` (modrole) or IRC-users with OP*
 - **!pull**: remove specific player from pickup games: `!pull [<players>]`
 - **!addgametype**: To add gametype: `!addgametype <gametypename> <playercount> <teamcount> <statsname>`
-- **!addserver**: To add server: `!addserver <servername> <ip:port>`
+- **!addserver**: To add server: `!addserver <servername> <ip:port> [<ip:port>]`
 - **!removegametype**: To delete gametype: `!removegametype [<gametypename>]`
 - **!removeserver**: To delete server: `!removeserver [<servername>]`
 

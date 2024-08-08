@@ -21,7 +21,7 @@
         "info":"Show information about one player: !info <playername>|<statsid>",
         "kill":"Command for marking users with xonotic flavour",
         "addgametype":"To add gametype: !addgametype <gametypename> <playercount> <teamcount> <statsname>",
-        "addserver":"To add server: !addserver <servername> <ip:port>",
+        "addserver":"To add server: !addserver <servername> <ip:port> [<ip:port>]",
         "removegametype":"To delete gametype: !removegametype [<gametypename>]",
         "removeserver":"To delete server: !removeserver [<servername>]",
         "cupstart":"To generate cup brackets: !cupstart <cuptitle> [<players/teams>]",
