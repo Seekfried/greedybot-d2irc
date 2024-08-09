@@ -94,6 +94,7 @@ There are three other different setting files:
 
 ### Admin/Moderator commands
 *For discord-users with the role specific to `settings.json` (modrole) or IRC-users with OP*
+- **!push**: add specific player to pickup games: `!push <player> [<gametype]>`
 - **!pull**: remove specific player from pickup games: `!pull [<players>]`
 - **!addgametype**: To add gametype: `!addgametype <gametypename> <playercount> <teamcount> <statsname>`
 - **!addserver**: To add server: `!addserver <servername> <ip:port> [<ip:port>]`

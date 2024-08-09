@@ -15,6 +15,7 @@
         "renew":"Renew pickup games",
         "remove":"Remove from all pickup games or specific games: !remove [<gametype>]",
         "server":"Show all available Xonotic servers or specific server and their IP: !server <servername>",
+        "push":"add specific player to pickup games: !push <player> [<gametype>]",
         "pull":"remove specific player from pickup games: !pull [<players>]",
         "who":"List all current pickup games with players",
         "online":"List all current online discord-members for irc-users and vice versa",
