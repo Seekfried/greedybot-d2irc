@@ -1,7 +1,7 @@
 {
     "misc":{        
-        "help":"Possible commands: !register !pickups !add !remove !renew !server !who !online !subscribe !unsubscribe !promote !lastgame !quote !serverinfo",
-        "helpadmin":"Possible commands: !register !pickups !add !remove !renew !server !who !online !subscribe !unsubscribe !promote !quote !serverinfo !lastgame !addserver !addgametype !pull !removeserver !removegametype",    
+        "help":"Possible commands: !register !pickups !add !remove !renew !server !who !online !subscribe !unsubscribe !promote !lastgame !top10 !quote !serverinfo",
+        "helpadmin":"Possible commands: !register !pickups !add !remove !renew !server !who !online !subscribe !unsubscribe !promote !quote !serverinfo !lastgame !top10 !addserver !addgametype !pull !removeserver !removegametype",    
         "nogame":"No game found! Possible gametypes: ",
         "registsuccess":"{0} registered Xonstat account #{1}: {2} (Xonstat profile: http://stats.xonotic.org/player/{1})",
         "restricted":"You dont have the rights for this command!",
