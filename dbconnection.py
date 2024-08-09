@@ -1,6 +1,6 @@
 from model import *
 from xonotic.utils import *
-from datetime import datetime
+from datetime import datetime, timedelta
 from copy import deepcopy
 from utils import create_logger
 from peewee_migrate import Router
@@ -526,6 +526,34 @@ class DatabaseConnector:
                 subs.append(subscription.gametypeId.title)
         db.close()
         return subs
+    
+    def get_top_ten(self, gametypes: list[str]) -> str:
+        message: str = "Top 10 players for last 1 month:"
+        gametypes_list: list[str] = self.get_gametype_list()
+        real_gametypes: list[str] = []
+        if gametypes:
+            real_gametypes = [set(gametypes).intersection(gametypes_list)]
+        else:
+            real_gametypes = gametypes_list
+
+        db.connect()
+        thirty_days_ago = datetime.now() - timedelta(days=30)
+        players_with_game_count = (
+            Players
+            .select(Players, fn.COUNT(PickupEntries.gameId).alias('game_count'))
+            .join(PickupEntries)
+            .join(PickupGames)
+            .join(GameTypes)
+            .where(PickupGames.createdDate >= thirty_days_ago, PickupGames.isPlayed == True, GameTypes.title << real_gametypes)
+            .group_by(Players))
+        if len(players_with_game_count) > 0:
+            for player in players_with_game_count:
+                message +=  f" {player.statsName}: {player.game_count}"
+        else:
+            message = "No Games the last 30 days!"
+
+        db.close()
+        return message
     
     def get_unbridged_players(self) -> tuple[list[str], list[str]]:
         muted_discord_users = []

@@ -91,6 +91,7 @@ There are three other different setting files:
 - **!kill**: Command for marking users with xonotic flavour (*see xonotic.json for more*)
 - **!bridge**: Switch bridge functionality on or off (for yourself)
 - **!start**: Force the start of a pickup game that doesn't have all the players yet: `!start <gametype>`
+- **!top10**: Show the top 10 players who have participated the most in the last 30 days in the given game types. If no game types are provided, it returns the overall: `!top10 [<gametype>]`
 
 ### Admin/Moderator commands
 *For discord-users with the role specific to `settings.json` (modrole) or IRC-users with OP*

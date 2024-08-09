@@ -629,3 +629,13 @@ class FriedyBot:
         else:
             self.send_notice(user, "You need to include a specific gametype!", chattype)
 
+    def command_top10(self, user, argument, chattype, isadmin):
+        #Show the top 10 players who have participated the most in the last 30 days in the given game types. 
+        #If no game types are provided, it returns the overall: 
+        #example: !top10 2v2tdm
+        logger.info("command_top10: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
+        gametype_args = set(argument[1:])
+        message: str = ""
+        
+        message = self.dbconnect.get_top_ten(gametype_args)
+        self.send_notice(user, message, chattype)
