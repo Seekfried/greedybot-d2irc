@@ -1,7 +1,7 @@
 {
     "misc":{        
         "help":"Possible commands: !register !pickups !add !remove !renew !server !who !online !subscribe !unsubscribe !promote !lastgame !quote !serverinfo",
-        "helpadmin":"Possible commands: !register !pickups !add !remove !renew !server !who !online !subscribe !unsubscribe !promote !quote !serverinfo !lastgame !addserver !addgametype !pull !removeserver !removegametype",    
+        "helpadmin":"Possible commands: !register !pickups !add !remove !renew !server !who !online !subscribe !unsubscribe !promote !quote !serverinfo !lastgame !addserver !addgametype !push !pull !removeserver !removegametype",    
         "nogame":"No game found! Possible gametypes: ",
         "registsuccess":"{0} registered Xonstat account #{1}: {2} (Xonstat profile: http://stats.xonotic.org/player/{1})",
         "restricted":"You dont have the rights for this command!",
@@ -15,6 +15,7 @@
         "renew":"Renew pickup games",
         "remove":"Remove from all pickup games or specific games: !remove [<gametype>]",
         "server":"Show all available Xonotic servers or specific server and their IP: !server <servername>",
+        "push":"add specific player to pickup games: !push <player> [<gametype>]",
         "pull":"remove specific player from pickup games: !pull [<players>]",
         "who":"List all current pickup games with players",
         "online":"List all current online discord-members for irc-users and vice versa",
