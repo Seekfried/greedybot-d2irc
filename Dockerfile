@@ -1,4 +1,4 @@
-FROM python:slim as base
+FROM python:slim
 
 WORKDIR /app
 
