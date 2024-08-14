@@ -11,6 +11,7 @@ COPY cmdresults.json /app/
 COPY gametypes.json /app/
 COPY xonotic.json /app/
 
-RUN pip install --no-cache-dir -r requirements.txt
+RUN apt-get update && apt-get -yq install chromium && \
+  pip install --no-cache-dir -r requirements.txt
 
 CMD ["python", "startbot.py"]
