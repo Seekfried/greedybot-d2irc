@@ -22,7 +22,7 @@ class FriedyBot:
         self.ircconnect = None
         self.discordconnect = None
         self.topic = ""
-        self.dbconnect = DatabaseConnector()        
+        self.dbconnect = DatabaseConnector(self.settings["database"]["filename"])        
         self.muted_discord_users = []
         self.muted_irc_users = []
         self.muted_discord_users, self.muted_irc_users = self.dbconnect.get_unbridged_players()

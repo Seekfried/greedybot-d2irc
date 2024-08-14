@@ -59,6 +59,9 @@ To get the **server and channel ID** of your discord, just go to your discord se
         "pugtimewarning": 2400,     //time in seconds, to warn player that pickup is going to expire
         "pugtimeout": 3600,         //time in seconds, that pickup is expired
         "browser": "chrome"         //Browser used for cup generation "chrome", "edge", "chromium"
+    },
+    "database":{
+        "filename": "pickups.db"     //Name of the SQLite File
     }
 }
 ```

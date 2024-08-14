@@ -9,8 +9,9 @@ db_logger = create_logger("dbConnector")
 
 class DatabaseConnector:
     
-    def __init__(self):
+    def __init__(self, filename):
         db_logger.info("Initialize db connection")
+        db.init(filename, pragmas={'foreign_keys': 1})
         db.close()
         router = Router(db)
         router.run()

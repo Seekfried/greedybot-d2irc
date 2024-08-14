@@ -1,7 +1,7 @@
 import datetime
 from peewee import *
 
-db = SqliteDatabase('pickups.db', pragmas={'foreign_keys': 1})
+db = SqliteDatabase(None) #'pickups.db', pragmas={'foreign_keys': 1})
 
 class Players(Model):
     ircName = CharField(unique=True, null=True)
