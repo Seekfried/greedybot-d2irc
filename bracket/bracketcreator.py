@@ -17,7 +17,12 @@ def get_cuppicture(arguments, browser):
     newTeam = teamtext.replace("'0'", "null")
 
     ROOT_DIR = os.path.realpath(os.path.join(os.path.dirname(__file__), '.'))
-    with open(os.path.join(ROOT_DIR, 'results', 'values.js'), "w+") as f:
+    directory_path = os.path.join(ROOT_DIR, 'results')
+    
+    if not os.path.exists(directory_path):
+        os.makedirs(directory_path)
+
+    with open(os.path.join(directory_path, 'values.js'), "w+") as f:
         f.seek(0)
         f.write(f"var cuptitle = '{title}';")
         f.write("var minimalData = {teams:" + newTeam + "}")
