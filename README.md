@@ -1,4 +1,4 @@
-# friedybot-d2irc
+# greedybot-d2irc
 A pickupbot for managing Xonotic pickup games
 
 ### Features:

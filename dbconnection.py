@@ -689,8 +689,9 @@ class DatabaseConnector:
                                 if pl.ircName:
                                     error_result = "Another player is registered with Xonstat account #" + xonstatId
                                 else:
-                                    irc_player.ircName = None
-                                    irc_player.save()
+                                    if irc_player:
+                                        irc_player.ircName = None
+                                        irc_player.save()
                                     pl.ircName = user
                                     pl.save()
                                     irc_name = pl.statsIRCName
@@ -723,9 +724,10 @@ class DatabaseConnector:
                                 if pl.discordName:
                                     error_result = "Another player is registered with Xonstat account #" + xonstatId
                                 else:
-                                    discord_player.discordName = None
-                                    discord_player.discordMention = None
-                                    discord_player.save()
+                                    if discord_player:
+                                        discord_player.discordName = None
+                                        discord_player.discordMention = None
+                                        discord_player.save()
                                     pl.discordName = user.name
                                     pl.discordMention = user.mention
                                     pl.save()
