@@ -811,7 +811,6 @@ class DatabaseConnector:
         db.close()
         return result, error_message, found_match
 
-    
     def withdraw_player_from_pickup(self, user, gametypes:list[str] = None, chattype = None) -> bool:
         db_logger.info("remove_player_from_pickup: user=%s, gametypes=%s, chattype=%s", user, gametypes, chattype)
         player = None
