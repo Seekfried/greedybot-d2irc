@@ -9,9 +9,9 @@ A pickupbot for managing Xonotic pickup games
 
 ## Installation and usage
 
-**Note**: friedybot-d2irc requires Python >= 3.9, as it depends on [numpy 2.0.0](https://numpy.org/) and [discord.py](https://github.com/Rapptz/discord.py).
+**Note**: greedybot-d2irc requires Python >= 3.9, as it depends on [numpy 2.0.0](https://numpy.org/) and [discord.py](https://github.com/Rapptz/discord.py).
 
-Download the code from this repository and configure setting.json (see [Configuration](https://github.com/Seekfried/friedybot-d2irc#configuration))
+Download the code from this repository and configure setting.json (see [Configuration](https://github.com/Seekfried/greedybot-d2irc#configuration))
 
 Install python dependencies
 ```bash
@@ -59,6 +59,9 @@ To get the **server and channel ID** of your discord, just go to your discord se
         "pugtimewarning": 2400,     //time in seconds, to warn player that pickup is going to expire
         "pugtimeout": 3600,         //time in seconds, that pickup is expired
         "browser": "chrome"         //Browser used for cup generation "chrome", "edge", "chromium"
+    },
+    "database":{
+        "filename": "pickups.db"     //Name of the SQLite File
     }
 }
 ```

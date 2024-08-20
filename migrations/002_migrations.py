@@ -18,12 +18,12 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
             GameTypes.get_or_create(title=gametitle, playerCount=gameinfo["playerCount"], teamCount=gameinfo["teamCount"], statsName=gameinfo["statsName"])
     except Exception as e:
         print('Error: %s', repr(e))
-  migrator.rename_column('servers', 'serverIp', 'serverIPv4')
-  migrator.change_columns('servers', serverIPv4=pw.CharField(unique=True, null=True))
+  migrator.rename_field('servers', 'serverIp', 'serverIPv4')
+  migrator.change_fields('servers', serverIPv4=pw.CharField(unique=True, null=True))
   migrator.add_fields('servers', serverIPv6=pw.CharField(unique=True, null=True))
   
 def rollback(migrator: Migrator, database: pw.Database, *, fake=False):
   migrator.drop_column('servers', 'serverIPv6')
-  migrator.rename_column('servers', 'serverIPv4', 'serverIp')
-  migrator.change_columns('servers', serverIp=pw.CharField(unique=True))
+  migrator.rename_field('servers', 'serverIPv4', 'serverIp')
+  migrator.change_fields('servers', serverIp=pw.CharField(unique=True))
 

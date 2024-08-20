@@ -19,5 +19,8 @@
         "pugtimewarning": 2400,
         "pugtimeout": 3600,
         "browser": "chrome"
+    },
+    "database":{
+        "filename": "pickups.db"
     }
 }

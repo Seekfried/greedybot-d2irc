@@ -10,9 +10,9 @@ from dbconnection import DatabaseConnector
 from xonotic.utils import get_quote
 from utils import create_logger, sanitize_ip_and_port, is_ipv4_address, is_ipv6_address
 
-logger = create_logger("friedybot")
+logger = create_logger("greedybot")
 
-class FriedyBot:
+class Greedybot:
     def __init__(self, settings, cmdresults, xonotic):
         self.pickupText = "Pickups: "
         self.picktimer = None
@@ -22,7 +22,7 @@ class FriedyBot:
         self.ircconnect = None
         self.discordconnect = None
         self.topic = ""
-        self.dbconnect = DatabaseConnector()        
+        self.dbconnect = DatabaseConnector(self.settings["database"]["filename"])        
         self.muted_discord_users = []
         self.muted_irc_users = []
         self.muted_discord_users, self.muted_irc_users = self.dbconnect.get_unbridged_players()
