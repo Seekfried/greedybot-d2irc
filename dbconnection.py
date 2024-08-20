@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from copy import deepcopy
 from utils import create_logger
 from peewee_migrate import Router
+from collections import Counter
 
 db_logger = create_logger("dbConnector")
 
@@ -367,14 +368,15 @@ class DatabaseConnector:
         db.connect()
         player = self.__get_player(user, chattype)
         if not player:
-            message = "You need to register first (!register) to subscribe!"
-        sub_entry = Subscriptions.select().join(GameTypes).where(GameTypes.title == gametypetitle, Subscriptions.playerId == player).first()
-        if sub_entry:
-            sub_entry.delete_instance()
-            if player.discordName:
-                discord_name = player.discordName
+            message = "You need to register first (!register) to subscribe!"            
         else:
-            message = "You are not subscribed to: " + gametypetitle
+            sub_entry = Subscriptions.select().join(GameTypes).where(GameTypes.title == gametypetitle, Subscriptions.playerId == player).first()
+            if sub_entry:
+                sub_entry.delete_instance()
+                if player.discordName:
+                    discord_name = player.discordName
+            else:
+                message = "You are not subscribed to: " + gametypetitle
 
         db.close()
         return message, discord_name
@@ -402,7 +404,7 @@ class DatabaseConnector:
         return result
     
     def get_full_stats(self, player_name: str, chattype: str) -> dict:
-        db_logger.info("get_skill_stats: player=%s, chattype=%s", player_name, chattype)
+        db_logger.info("get_full_stats: player=%s, chattype=%s", player_name, chattype)
         skill_stats: list[dict] = []
         stats = {}
         stats_id: int = -1
@@ -446,20 +448,25 @@ class DatabaseConnector:
         return result
 
     def get_lastgame(self, chattype) -> str:
+        result_text: str = ""
         db.connect()
         lastPickupGame = PickupGames.select().where(PickupGames.isPlayed == True).order_by(PickupGames.createdDate.desc()).first()
-        lastPickupGamePlayers = lastPickupGame.addedplayers
-        resultText = lastPickupGame.gametypeId.title + ", played on " + lastPickupGame.createdDate.strftime("%Y-%m-%d") + " was played with: "
-        for player in lastPickupGamePlayers:
-            if chattype == "irc":
-                playername = player.playerId.ircName if player.playerId.ircName is not None else player.playerId.discordName
-                resultText += playername + " " + ("("+player.playerId.statsIRCName + ") " if player.playerId.statsIRCName is not None else "")
-            else:
-                playername = player.playerId.discordName if player.playerId.discordName is not None else player.playerId.ircName
-                resultText += playername + " " + ("("+player.playerId.statsDiscordName + ") " if player.playerId.statsDiscordName is not None else "")
+        if lastPickupGame:
+            lastPickupGamePlayers = lastPickupGame.addedplayers
+            result_text = lastPickupGame.gametypeId.title + ", played on " + lastPickupGame.createdDate.strftime("%Y-%m-%d") + " was played with: "
+            for player in lastPickupGamePlayers:
+                if chattype == "irc":
+                    playername = player.playerId.ircName if player.playerId.ircName is not None else player.playerId.discordName
+                    result_text += playername + " " + ("("+player.playerId.statsIRCName + ") " if player.playerId.statsIRCName is not None else "")
+                else:
+                    playername = player.playerId.discordName if player.playerId.discordName is not None else player.playerId.ircName
+                    result_text += playername + " " + ("("+player.playerId.statsDiscordName + ") " if player.playerId.statsDiscordName is not None else "")
+        else:
+            result_text = "No game played!"
         db.close()
+        return result_text
 
-    def get_pickuptext(self) -> tuple[bool, str]:
+    def get_pickuptext(self) -> str:
         #Get string of active pickups with gametype and number of players/player needed 
         #example: "2v2tdm (2/4)"
         db_logger.info("Build pickuptext")
@@ -549,12 +556,12 @@ class DatabaseConnector:
     
     def get_top_ten(self, gametypes: list[str]) -> str:
         db_logger.info("get_top_ten: gametypes=%s", gametypes)
-        message: str = "Top 10 players for last 1 month"
+        message: str = "Top 10 players for last 30 days"
         gametypes_list: list[str] = self.get_gametype_list()
         real_gametypes: list[str] = []
 
         if gametypes:
-            real_gametypes = list(set(gametypes).intersection(gametypes_list))
+            real_gametypes = list((Counter(gametypes) & Counter(gametypes_list)).elements()) #list(set(gametypes).intersection(gametypes_list))
         else:
             real_gametypes = gametypes_list
         if len(real_gametypes) > 0:

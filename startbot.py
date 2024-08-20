@@ -1,4 +1,4 @@
-from friedybot import FriedyBot
+from greedybot import Greedybot
 import json
 
 # Get the bot settings from settings.json
@@ -16,5 +16,5 @@ f = open("xonotic.json", encoding="utf-8")
 xonotic = json.loads(f.read())
 f.close()
 
-bot = FriedyBot(settings, cmdresults, xonotic)
+bot = Greedybot(settings, cmdresults, xonotic)
 bot.run()
