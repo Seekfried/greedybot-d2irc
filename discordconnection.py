@@ -2,6 +2,7 @@ import logging
 import discord
 import asyncio
 from utils import create_logger
+from xonotic.utils import strip_irc_colors
 
 # Based on discordc.py from https://github.com/milandamen/Discord-IRC-Python
 
@@ -87,7 +88,8 @@ class DiscordConnector:
         asyncio.run_coroutine_threadsafe(client.close(), client.loop)
 
 async def send_my_message_async(message):
-    await channel.send(message.strip())
+    colorless_message = strip_irc_colors(message)
+    await channel.send(colorless_message.strip())
 
 async def send_my_file_async(path):
     await channel.send(file=discord.File(path))
