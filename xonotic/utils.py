@@ -120,6 +120,11 @@ def irc_colors(qstr: str) -> str:
     result += "\017"
     return result
 
+def strip_irc_colors(message: str) -> str:
+    color_code_pattern = re.compile(r'\x03(,?\d{1,2})?(\d{1,2})?')
+    message_stripped = color_code_pattern.sub('', message)
+    return message_stripped
+
 def get_statsnames(id) -> tuple:
     #get xonstat player names
     utils_logger.info("get_statsnames: id=%s", id)
