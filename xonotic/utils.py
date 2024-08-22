@@ -121,7 +121,7 @@ def irc_colors(qstr: str) -> str:
     return result
 
 def strip_irc_colors(message: str) -> str:
-    color_code_pattern = re.compile(r'\x03(,?\d{1,2})?(\d{1,2})?')
+    color_code_pattern = re.compile('\x03(?:[0-9]{0,2}(?:,[0-9]{1,2})?)|\x0f')
     message_stripped = color_code_pattern.sub('', message)
     return message_stripped
 
