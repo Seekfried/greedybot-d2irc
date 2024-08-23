@@ -98,6 +98,7 @@ class IrcConnector(irc.bot.SingleServerIRCBot):
                 self.bot.send_command(author, message, "irc", False)            
         elif should_bridge:
             self.bot.discordconnect.send_my_message_with_mention("<"+ author + "> " + message)
+            self.bot.matrixconnect.send_my_message("<"+ author + "> " + message)
     
     def run(self):
         self.start()

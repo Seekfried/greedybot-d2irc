@@ -5,10 +5,12 @@ import random
 from datetime import datetime
 import time
 from ircconnection import IrcConnector
-from discordconnection import DiscordConnector
+from discordconnection import DiscordConnector, client
 from dbconnection import DatabaseConnector
+from matrixconnection import MatrixConnector
 from xonotic.utils import get_quote
 from utils import create_logger, sanitize_ip_and_port, is_ipv4_address, is_ipv6_address
+import asyncio
 
 logger = create_logger("greedybot")
 
@@ -30,13 +32,34 @@ class Greedybot:
     def run(self):
         self.ircconnect = IrcConnector(self.settings["irc"], self)
         self.discordconnect = DiscordConnector(self.settings["discord"], self)
+        self.matrixconnect = MatrixConnector(self.settings["matrix"], self)
 
         t1 = threading.Thread(target=self.ircconnect.run)
         t1.daemon = True                                    # Thread dies when main thread (only non-daemon thread) exits.
         t1.start()
-
-        self.discordconnect.run()
+        # t2 = threading.Thread(target=self.discordconnect.run)
+        # t2.daemon = True                                    # Thread dies when main thread (only non-daemon thread) exits.
+        # t2.start()
+        # loop = asyncio.new_event_loop()
+        # asyncio.set_event_loop(loop)
+        # t3 = threading.Thread(target=self.matrixconnect.run, args=(loop,))
+        # t3.start()
+        # try:
+        #     # Start the event loop
+        #     loop.run_forever()
+        # finally:
+        #     # Cleanup
+        #     loop.call_soon_threadsafe(loop.stop)  # Stop the loop when done
+        #     t3.join()
+        # #self.matrixconnect.run()
+        # #asyncio.run(self.matrixconnect.start())
+        # #self.discordconnect.run()
+        asyncio.run(self.run_async())
         self.ircconnect.close()
+
+    async def run_async(self):
+        global client
+        await asyncio.gather(self.matrixconnect.start(), client.start(self.settings["discord"]["token"]))
     
     def start_pugtimer(self):
         #background timer to warn players of expiring pickup games or deletes old pickup games
@@ -108,7 +131,7 @@ class Greedybot:
         else:
             self.ircconnect.send_my_message(message)
         self.discordconnect.send_my_message(message)
-    
+
     def wrong_command(self, user, argument, chattype, isadmin):
         #if user inputs wrong command
         logger.info("wrong_command: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
