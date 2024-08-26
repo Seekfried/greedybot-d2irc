@@ -1,5 +1,4 @@
 import logging
-import asyncio
 import time
 from nio import AsyncClient, MatrixRoom, RoomMessageText, LoginResponse
 from utils import create_logger
