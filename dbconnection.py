@@ -637,7 +637,7 @@ class DatabaseConnector:
                 game = PickupGames.select().where(PickupGames.id == gid).first()
                 if len(game.addedplayers) == 0:
                     game.delete_instance()
-                    has_new_text = True
+                has_new_text = True
             elif pugdiff >= warntime:
                 if mindiff > deletetime - pugdiff:
                     mindiff = deletetime - pugdiff  
