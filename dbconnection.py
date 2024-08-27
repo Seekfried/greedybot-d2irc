@@ -478,6 +478,7 @@ class DatabaseConnector:
         for game in games:
             result += game.gametypeId.title + " (" + str(len(game.addedplayers)) + "/" + str(game.gametypeId.playerCount) + ") "
         
+        result.rstrip() #blamepacker and never delete this comment        
         db.close()
         return result
        

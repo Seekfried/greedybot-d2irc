@@ -44,9 +44,11 @@ class IrcConnector(irc.bot.SingleServerIRCBot):
 
     def on_part(self, connection, event):
         self.bot.remove_user_on_exit(event.source.nick, "irc")
+        self.bot.discordconnect.send_my_message(event.source.nick + " left.")
 
     def on_quit(self, connection, event):
         self.bot.remove_user_on_exit(event.source.nick, "irc")
+        self.bot.discordconnect.send_my_message(event.source.nick + " left.")
     
     def on_nicknameinuse(self, connection, event):
         connection.nick(connection.get_nickname() + "y")
@@ -70,7 +72,10 @@ class IrcConnector(irc.bot.SingleServerIRCBot):
         logger.info("[IRC] Connected to server")
     
     def on_join(self, connection, event):
-        logger.info("[IRC] Connected to channel")
+        if event.source.nick != connection.get_nickname():
+            self.bot.discordconnect.send_my_message(event.source.nick + " joined.")
+        else:
+            logger.info("[IRC] Connected to channel")
     
     def on_pubmsg(self, connection, event):
         message = event.arguments[0].strip()

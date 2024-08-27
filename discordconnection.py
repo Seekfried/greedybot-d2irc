@@ -143,7 +143,7 @@ async def on_message(message):
         content = message.clean_content
         for line in content.splitlines():
             if line.strip() != "":
-                bot.ircconnect.send_my_message("<%s> %s" % (message.author.name, line))
+                bot.ircconnect.send_my_message("<@%s (%s)> %s" % (message.author.name, message.author.display_name, line))
 
         for attachment in message.attachments:
             bot.ircconnect.send_my_message("URL: " + attachment.url)
@@ -158,6 +158,9 @@ async def on_message(message):
 async def on_presence_update(before, after):
     if after.status.name == "offline":
         bot.remove_user_on_exit(after, "discord")
+        bot.ircconnect.send_my_message("- @%s (%s) is now offline -" % (after.name, after.display_name))
+    if before.status.name == "offline":
+        bot.ircconnect.send_my_message("- @%s (%s) is now online -" % (after.name, after.display_name))
     #pass #todo delete pickup if going offline
     # await channel.send(f"""{after}'s activity changed from {before.status} to {after.status}""")
     # bot.ircconnect.send_my_message(f"""{after}'s activity changed from {before.status} to {after.status}""")
