@@ -6,14 +6,16 @@
         "channel": "#",
         "nickname": "",
         "botowner": "",
-        "quitmsg": "Cya!"
+        "quitmsg": "Cya!",
+        "presence-update": false
     },
     "discord": {
         "token": "",
         "botowner": "",
         "server": "",
         "channel": "",
-        "modrole": "moderator"
+        "modrole": "moderator",        
+        "presence-update": false
     },
     "bot": {
         "pugtimewarning": 2400,

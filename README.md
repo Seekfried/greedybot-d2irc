@@ -46,14 +46,16 @@ To get the **server and channel ID** of your discord, just go to your discord se
         "channel": "#",     //Your IRC-Channelname
         "nickname": "",     //IRC-Nickname for the bot
         "botowner": "",     //IRC-User that can close the bot with the !quit command
-        "quitmsg": "Cya!"   //IRC quit message
+        "quitmsg": "Cya!",  //IRC quit message
+        "presence-update": false    //Show messages if irc user left/joined the channel
     },
     "discord": {
         "token": "",        //Discord bot's token
         "botowner": "",     //Discord-User that can close the bot with the !quit command
         "server": "",       //Discord server ID
         "channel": "",      //Discord channel ID
-        "modrole": "mods"   //Discord rolename to enable Admin/Moderator commands for users
+        "modrole": "mods",  //Discord rolename to enable Admin/Moderator commands for users
+        "presence-update": false    //Show messages if discord user goes offline/online
     },
     "bot": {
         "pugtimewarning": 2400,     //time in seconds, to warn player that pickup is going to expire
