@@ -3,7 +3,7 @@ import time
 from nio import AsyncClient, MatrixRoom, RoomMessageText, LoginResponse
 from utils import create_logger
 
-logger = create_logger("discordconnection", logging.INFO)
+logger = create_logger(__name__)
 
 class MatrixConnector:
     def __init__(self, settings: dict, bot):
@@ -40,11 +40,15 @@ class MatrixConnector:
             # Compare the event timestamp with the start time
             if event_timestamp > self.start_time:
                 # Process the new message
-                logger.info("New message in", room.display_name, ":", event.body)
+                logger.info(f"New message in {room.display_name} : {event.body}")
                 self.bot.send_all("<"+ room.user_name(event.sender) + "> " + event.body)
     
     async def send_my_message(self,message):
-        await self.client.room_send(
-             room_id=self.room,
-             message_type="m.room.message",
-             content={"msgtype": "m.text", "body": message})
+        [ response, error ] = await self.client.room_send(
+            room_id=self.room,
+            message_type="m.room.message",
+            content={"msgtype": "m.text", "body": message})
+        if error:
+            logger.error("Error in send_my_message: ", error)
+        logger.info("Message sent: ", response)
+        return response
