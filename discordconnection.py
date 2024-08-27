@@ -141,7 +141,9 @@ async def on_message(message):
     
     if should_bridge:
         content = message.clean_content
-        bot.ircconnect.send_my_message("<%s> %s" % (message.author.name, content))
+        for line in content.splitlines():
+            if line.strip() != "":
+                bot.ircconnect.send_my_message("<%s> %s" % (message.author.name, line))
 
         for attachment in message.attachments:
             bot.ircconnect.send_my_message("URL: " + attachment.url)
