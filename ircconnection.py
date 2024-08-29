@@ -38,15 +38,21 @@ class IrcConnector(irc.bot.SingleServerIRCBot):
         self.running = False
 
     def on_nick(self, connection, event):
-            before = event.source.nick
-            after = event.target
-            self.bot.change_name(before, after)
+        before = event.source.nick
+        after = event.target
+        self.bot.change_name(before, after)
+        if self.settings["presence-update"]:
+            self.bot.discordconnect.send_my_message(before + " now known as " + after + ".")
 
     def on_part(self, connection, event):
         self.bot.remove_user_on_exit(event.source.nick, "irc")
+        if self.settings["presence-update"]:
+            self.bot.discordconnect.send_my_message(event.source.nick + " left.")
 
     def on_quit(self, connection, event):
         self.bot.remove_user_on_exit(event.source.nick, "irc")
+        if self.settings["presence-update"]:
+            self.bot.discordconnect.send_my_message(event.source.nick + " left.")
     
     def on_nicknameinuse(self, connection, event):
         connection.nick(connection.get_nickname() + "y")
@@ -70,7 +76,10 @@ class IrcConnector(irc.bot.SingleServerIRCBot):
         logger.info("[IRC] Connected to server")
     
     def on_join(self, connection, event):
-        logger.info("[IRC] Connected to channel")
+        if event.source.nick != connection.get_nickname() and self.settings["presence-update"]:
+            self.bot.discordconnect.send_my_message(event.source.nick + " joined.")
+        else:
+            logger.info("[IRC] Connected to channel")
     
     def on_pubmsg(self, connection, event):
         message = event.arguments[0].strip()
