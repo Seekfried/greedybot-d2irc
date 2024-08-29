@@ -1,5 +1,6 @@
 from model import *
 from xonotic.utils import *
+from chattype import ChatType
 from datetime import datetime, timedelta
 from copy import deepcopy
 from utils import create_logger
@@ -46,33 +47,44 @@ class DatabaseConnector:
                 discordresult = puggame.gametypeId.title + " ready! Players are: "
                 for pugplayer in pugplayers:
                     #self.__withdraw_player_from_all(pugplayer.playerId)
-                    if pugplayer.addedFrom == "irc":
+                    if pugplayer.addedFrom == ChatType.IRC.value:
                         discordresult += pugplayer.playerId.ircName + " (" + pugplayer.playerId.statsDiscordName + ") "
                         ircresult += pugplayer.playerId.ircName + " (" + pugplayer.playerId.statsIRCName + ") "
-                    else:
+                    elif pugplayer.addedFrom == ChatType.DISCORD.value:
                         discordresult += pugplayer.playerId.discordMention + " (" + pugplayer.playerId.statsDiscordName + ") "
                         ircresult += pugplayer.playerId.discordName + " (" + pugplayer.playerId.statsIRCName + ") "
+                    elif pugplayer.addedFrom == ChatType.MATRIX.value:
+                        # TODO Implement matrix connection
+                        pass
+                    else:
+                        db_logger.error("Unknown chattype: %s", pugplayer.addedFrom)
                     self.__withdraw_player_from_all(pugplayer.playerId)
             else:
                 has_teams = True
                 team_result = self.__get_teamtext(pugplayers, puggame.gametypeId.teamCount, puggame.gametypeId.statsName)
-                ircresult = team_result["irc"]
-                discordresult = team_result["discord"]
+                ircresult = team_result[ChatType.IRC.value]
+                discordresult = team_result[ChatType.DISCORD.value]
                 ircresult.insert(0, puggame.gametypeId.title + " ready! Players are: ")
                 discordresult.insert(0, puggame.gametypeId.title + " ready! Players are: ")
-            result = {"has_teams": has_teams, "irc": ircresult, "discord": discordresult, "playercount": puggame.gametypeId.playerCount}
+            result = {"has_teams": has_teams, ChatType.IRC.value: ircresult, ChatType.DISCORD.value: discordresult, "playercount": puggame.gametypeId.playerCount}
             self.__delete_all_pickupgames_without_entries()
         return result
     
     def __get_player(self, user, chattype=None) -> Players:
+        db_logger.debug("__get_player: user=%s, chattype=%s", user, chattype)
         player = None
         user = user if type(user)==str else user.name
         if chattype is None:
             player = Players.select().where((Players.ircName == user)|(Players.discordName == user)).first()
-        elif chattype == "irc":
+        elif chattype == ChatType.IRC.value:
             player = Players.select().where(Players.ircName == user).first()
-        else:
+        elif chattype == ChatType.DISCORD.value:
             player = Players.select().where(Players.discordName == user).first()
+        elif chattype == ChatType.MATRIX.value:
+            # TODO: Implement matrix connection
+            pass
+        else:
+            db_logger.error("Unknown chattype: %s", chattype)
         return player
     
     def __get_player_subscriptions(self, player) -> Subscriptions:
@@ -82,7 +94,7 @@ class DatabaseConnector:
 
     def __get_teamtext(self, players, teamcount, xongametype):
         #logger.info("found_match: players=%s, teamcount=%s, xongametype=%s", players, teamcount, xongametype)
-        matchtext = {"irc":[],"discord":[]}
+        matchtext = {ChatType.IRC.value:[],ChatType.DISCORD.value:[]}
         teams = [[] for _ in range(teamcount)]
         total_elo = [0] * teamcount
         players_with_elo = []
@@ -126,22 +138,27 @@ class DatabaseConnector:
             captain = team['captain']
             for team_member in team['team']:
                 #self.__withdraw_player_from_all(team_member['player'].playerId)
-                if team_member['player'].addedFrom == "irc":
+                if team_member['player'].addedFrom == ChatType.IRC.value:
                     discord_entry += team_member['player'].playerId.ircName + " (" + team_member['player'].playerId.statsName + ") "
                     irc_entry += team_member['player'].playerId.ircName + " (" + team_member['player'].playerId.statsIRCName + ") "
-                else:
+                elif team_member['player'].addedFrom == ChatType.DISCORD.value:
                     discord_entry += team_member['player'].playerId.discordMention + " (" + team_member['player'].playerId.statsName + ") "
                     irc_entry += team_member['player'].playerId.discordName + " (" + team_member['player'].playerId.statsIRCName + ") "
+                elif team_member['player'].addedFrom == ChatType.MATRIX.value:
+                    # TODO Implement matrix connection
+                    pass
+                else:
+                    db_logger.error("Unknown chattype: %s", team_member['player'].addedFrom)
 
             captains_discord += f"{captain['player'].playerId.statsDiscordName} ({captain['elo']:.2f}) "
             discord_entry += f"Average Elo: {team['average_elo']:.2f} "
             captains_irc += f"{captain['player'].playerId.statsIRCName} ({captain['elo']:.2f}) "
             irc_entry += f"Average Elo: {team['average_elo']:.2f} "
-            matchtext["irc"].append(irc_entry)
-            matchtext["discord"].append(discord_entry)
+            matchtext[ChatType.IRC.value].append(irc_entry)
+            matchtext[ChatType.DISCORD.value].append(discord_entry)
         
-        matchtext["irc"].append(captains_irc)
-        matchtext["discord"].append(captains_discord)
+        matchtext[ChatType.IRC.value].append(captains_irc)
+        matchtext[ChatType.DISCORD.value].append(captains_discord)
         return matchtext
     
     def __delete_all_pickupgames_without_entries(self):
@@ -222,9 +239,14 @@ class DatabaseConnector:
                                 __addedFrom: str = chattype
                                 if recipient is not None:
                                     if player.ircName:
-                                        __addedFrom = "irc"
+                                        __addedFrom = ChatType.IRC.value
+                                    elif player.discordName:
+                                        __addedFrom = ChatType.DISCORD.value
+                                    elif player.matrixName:
+                                        __addedFrom = ChatType.MATRIX.value
                                     else:
-                                        __addedFrom = "discord"
+                                        db_logger.error("No chattype found for player: %s", player)
+                                        __addedFrom = "unknown"
                                 pickentry = PickupEntries(playerId=player.id, gameId=game.id, addedFrom=__addedFrom)
                                 pickentry.save()
                                 result = True
@@ -385,7 +407,7 @@ class DatabaseConnector:
         # structur of result
         # {"duel": {"irc":["Seek-y"], "discord":[], "playercount":"(1/2)"}, "2v2tdm": {"irc":["Seek-y", "Grunt"], "discord":["Silence"], "playercount":"(3/4)"}} 
         result: dict = {}
-        inner_result: dict = {"irc":[], "discord":[], "playercount":""}
+        inner_result: dict = {ChatType.IRC.value:[], ChatType.DISCORD.value:[], "playercount":""}
 
         db.connect()
         games: list[PickupGames] = self.__get_active_games()
@@ -395,11 +417,15 @@ class DatabaseConnector:
                 playerentries: list[PickupEntries] = game.addedplayers
                 result[game.gametypeId.title]["playercount"] = "(" + str(len(playerentries)) + "/" + str(game.gametypeId.playerCount) + ")"
                 for playerentry in playerentries:
-                    if playerentry.addedFrom == "irc":
-                        result[game.gametypeId.title]["irc"].append(playerentry.playerId.ircName)
+                    if playerentry.addedFrom == ChatType.IRC.value:
+                        result[game.gametypeId.title][ChatType.IRC.value].append(playerentry.playerId.ircName)
+                    elif playerentry.addedFrom == ChatType.DISCORD.value:
+                        result[game.gametypeId.title][ChatType.DISCORD.value].append(playerentry.playerId.discordName)
+                    elif playerentry.addedFrom == ChatType.MATRIX.value:
+                        # TODO Implement matrix connection
+                        pass
                     else:
-                        result[game.gametypeId.title]["discord"].append(playerentry.playerId.discordName)
-
+                        db_logger.error("Unknown chattype: %s", playerentry.addedFrom)
         db.close()
         return result
     
@@ -427,10 +453,13 @@ class DatabaseConnector:
             stats = get_full_stats(stats_id)
             if stats.get('player') is not None:
                 stats["skill_stats"] = skill_stats
-                if chattype == "irc":
+                if chattype == ChatType.IRC.value:
                     stats["player"]["colored_name"] = irc_colors(stats["player"]["nick"])
-                elif chattype == "discord":
+                elif chattype == ChatType.DISCORD.value:
                     stats["player"]["colored_name"] = discord_colors(stats["player"]["nick"])
+                elif chattype == ChatType.MATRIX.value:
+                    # TODO: Implement matrix connection
+                    pass
                 else:
                     stats["player"]["colored_name"] = stats["player"]["stripped_nick"]
             
@@ -455,12 +484,17 @@ class DatabaseConnector:
             lastPickupGamePlayers = lastPickupGame.addedplayers
             result_text = lastPickupGame.gametypeId.title + ", played on " + lastPickupGame.createdDate.strftime("%Y-%m-%d") + " was played with: "
             for player in lastPickupGamePlayers:
-                if chattype == "irc":
+                if chattype == ChatType.IRC.value:
                     playername = player.playerId.ircName if player.playerId.ircName is not None else player.playerId.discordName
                     result_text += playername + " " + ("("+player.playerId.statsIRCName + ") " if player.playerId.statsIRCName is not None else "")
-                else:
+                elif chattype == ChatType.DISCORD.value:
                     playername = player.playerId.discordName if player.playerId.discordName is not None else player.playerId.ircName
                     result_text += playername + " " + ("("+player.playerId.statsDiscordName + ") " if player.playerId.statsDiscordName is not None else "")
+                elif chattype == ChatType.MATRIX.value:
+                    # TODO: Implement matrix connection
+                    pass
+                else:
+                    db_logger.error("Unknown chattype: %s", chattype)
         else:
             result_text = "No game played!"
         db.close()
@@ -644,10 +678,7 @@ class DatabaseConnector:
                 if not pugentry.isWarned:
                     pugentry.isWarned = True
                     pugentry.save()
-                    if pugentry.addedFrom == "irc":
-                        warn_user = {"user": pugentry.playerId.ircName, "chattype": "irc"}
-                    else:
-                        warn_user = {"user": pugentry.playerId.discordMention, "chattype": "discord"}
+                    warn_user = {"user": pugentry.playerId.ircName, "chattype": pugentry.addedFrom}
             else:
                 if mindiff > warntime - pugdiff:
                     mindiff = warntime - pugdiff
@@ -670,7 +701,7 @@ class DatabaseConnector:
                 if xonstatsname is None:
                     error_result = "No Player with this ID"
                 else:
-                    if chattype == "irc":
+                    if chattype == ChatType.IRC.value:
                         irc_player: Players = Players.select().where(Players.ircName == user).first()
                         pl: Players = Players.select().where(Players.statsId == xonstatId).first()
                         if pl is None and irc_player is None:
@@ -704,7 +735,7 @@ class DatabaseConnector:
                                     pl.save()
                                     irc_name = pl.statsIRCName
                                     discord_name = pl.statsDiscordName
-                    else:
+                    elif chattype == ChatType.DISCORD.value:
                         discord_player: Players = Players.select().where(Players.discordName == user.name).first()
                         pl: Players = Players.select().where(Players.statsId == xonstatId).first()
                         if pl is None and discord_player is None:
@@ -741,6 +772,12 @@ class DatabaseConnector:
                                     pl.save()
                                     irc_name = pl.statsIRCName
                                     discord_name = pl.statsDiscordName
+                    elif chattype == ChatType.MATRIX.value:
+                        # TODO: Implement Matrix
+                        pass
+                    else:
+                        db_logger.error("Unknown chattype: %s", chattype)
+                        error_result = "Unknown chattype!"
             except Exception as e:
                 db_logger.error("Error in command_register: ", e, "Reason: ", e.args)
                 error_result = "Problem with XonStats"

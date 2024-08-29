@@ -1,4 +1,5 @@
 from greedybot import Greedybot
+import asyncio
 import json
 
 # Get the bot settings from settings.json
@@ -17,4 +18,4 @@ xonotic = json.loads(f.read())
 f.close()
 
 bot = Greedybot(settings, cmdresults, xonotic)
-bot.run()
+asyncio.run(bot.run())

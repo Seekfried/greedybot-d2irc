@@ -1,4 +1,5 @@
 from unittest import result
+from chattype import ChatType
 from bracket.bracketcreator import get_cuppicture
 import threading
 import random
@@ -12,7 +13,7 @@ from xonotic.utils import get_quote
 from utils import create_logger, sanitize_ip_and_port, is_ipv4_address, is_ipv6_address
 import asyncio
 
-logger = create_logger("greedybot")
+logger = create_logger(__name__)
 
 class Greedybot:
     def __init__(self, settings, cmdresults, xonotic):
@@ -29,14 +30,20 @@ class Greedybot:
         self.muted_irc_users = []
         self.muted_discord_users, self.muted_irc_users = self.dbconnect.get_unbridged_players()
 
-    def run(self):
-        self.ircconnect = IrcConnector(self.settings["irc"], self)
-        self.discordconnect = DiscordConnector(self.settings["discord"], self)
-        self.matrixconnect = MatrixConnector(self.settings["matrix"], self)
+    async def run(self):
+        if self.settings[ChatType.IRC.value]:
+            self.ircconnect = IrcConnector(self.settings[ChatType.IRC.value], self)
+            t1 = threading.Thread(target=self.ircconnect.run)
+            t1.daemon = True                                    # Thread dies when main thread (only non-daemon thread) exits.
+            t1.start()
+        
+        if self.settings[ChatType.DISCORD.value]:
+            self.discordconnect = DiscordConnector(self.settings[ChatType.DISCORD.value], self)
+            
+        if self.settings[ChatType.MATRIX.value]:
+            self.matrixconnect = MatrixConnector(self.settings[ChatType.MATRIX.value], self)
 
-        t1 = threading.Thread(target=self.ircconnect.run)
-        t1.daemon = True                                    # Thread dies when main thread (only non-daemon thread) exits.
-        t1.start()
+
         # t2 = threading.Thread(target=self.discordconnect.run)
         # t2.daemon = True                                    # Thread dies when main thread (only non-daemon thread) exits.
         # t2.start()
@@ -54,12 +61,15 @@ class Greedybot:
         # #self.matrixconnect.run()
         # #asyncio.run(self.matrixconnect.start())
         # #self.discordconnect.run()
-        asyncio.run(self.run_async())
-        self.ircconnect.close()
+
+        discord = asyncio.create_task(client.start(self.settings[ChatType.DISCORD.value]["token"]))
+        matrix = asyncio.create_task(self.matrixconnect.start())
+        await discord
+        await matrix
 
     async def run_async(self):
         global client
-        await asyncio.gather(self.matrixconnect.start(), client.start(self.settings["discord"]["token"]))
+        await asyncio.gather(self.matrixconnect.start(), client.start(self.settings[ChatType.DISCORD.value]["token"]))
     
     def start_pugtimer(self):
         #background timer to warn players of expiring pickup games or deletes old pickup games
@@ -78,11 +88,15 @@ class Greedybot:
 
                 #player gets notified: "Your added games will expire in 20 minutes, type !renew to renew your games"
                 if warn_user:
-                    if warn_user["chattype"] == "irc":
+                    if warn_user["chattype"] == ChatType.IRC.value:
                         self.send_notice(warn_user["user"], self.cmdresults["misc"]["pugtimewarn"], warn_user["chattype"])
-                    else:
+                    elif warn_user["chattype"] == ChatType.DISCORD.value:
                         self.send_notice(None, warn_user["user"] +  " " + self.cmdresults["misc"]["pugtimewarn"], warn_user["chattype"])
-
+                    elif warn_user["chattype"] == ChatType.MATRIX.value:
+                        # TODO: Implement Matrix connection
+                        pass
+                    else:
+                        logger.error("Unknown chattype: ", warn_user["chattype"])
                 if has_break:
                     break
                 if not self.dbconnect.has_active_games():
@@ -97,9 +111,9 @@ class Greedybot:
         logger.info("set_irc_topic")
         try:
             if  self.pickupText != "Pickups: ":
-                self.ircconnect.connection.topic(self.settings["irc"]["channel"], new_topic=self.pickupText)
+                self.ircconnect.connection.topic(self.settings[ChatType.IRC.value]["channel"], new_topic=self.pickupText)
             else:
-                self.ircconnect.connection.topic(self.settings["irc"]["channel"], new_topic=self.topic)
+                self.ircconnect.connection.topic(self.settings[ChatType.IRC.value]["channel"], new_topic=self.topic)
         except Exception as e:
             logger.error("Something wrong with topic: ", e)
     
@@ -118,18 +132,33 @@ class Greedybot:
     def send_notice(self, user, message, chattype):
         #sends message to only discord or to specific irc-user (for future: send direct message to discord-user)
         logger.info("send_notice: user=%s, message=%s, chattype=%s", user, message, chattype)
-        if chattype == "irc":
+        if chattype == ChatType.IRC.value:
             self.ircconnect.send_single_message(user,message)
-        else:
+        elif chattype == ChatType.DISCORD.value:
             self.discordconnect.send_my_message(message)
+        elif chattype == ChatType.MATRIX.value:
+            # TODO: Implement Matrix connection
+            pass
+        else:
+            logger.error("Unknown chattype: ", chattype)
 
-    def send_all(self, message, ircmessage = None):
+    def send_all(self, message, ircmessage = None, matrixmessage = None):
         #sends message to all (irc and discord)
         logger.info("send_all: message=%s, ircmessage=%s", message, ircmessage)
         if ircmessage is not None:
             self.ircconnect.send_my_message(ircmessage)
         else:
             self.ircconnect.send_my_message(message)
+        if matrixmessage is not None:
+            if not asyncio.get_event_loop().is_running():
+                asyncio.run(self.matrixconnect.send_my_message(matrixmessage))
+            else:
+                asyncio.get_event_loop().create_task(self.matrixconnect.send_my_message(matrixmessage))
+        else:
+            if not asyncio.get_event_loop().is_running():
+                asyncio.run(self.matrixconnect.send_my_message(message))
+            else:
+                asyncio.get_event_loop().create_task(self.matrixconnect.send_my_message(message))
         self.discordconnect.send_my_message(message)
 
     def wrong_command(self, user, argument, chattype, isadmin):
@@ -177,13 +206,13 @@ class Greedybot:
             self.set_irc_topic()
         return self.pickupText
     """
-    Commands for IRC and discord
+    Commands for IRC, Discord, and Matrix
         Naming Convention for bot methods is command_yourcommand
         example:
             def command_hug(self, user, argument, chattype, isadmin):
                 user: irc-username or discord author-object
                 argument: array of user typed command for example: !add duel 2v2tdm -> [!add, duel, 2v2tdm]
-                chattype: incoming message type ("irc"/"discord")
+                chattype: incoming message type (ChatType.IRC.value/ChatType.DISCORD.value/ChatType.MATRIX.value)
                 isAdmin: is user in discord-moderator-role (see settings.json) or is irc-operator
     """
 
@@ -196,13 +225,18 @@ class Greedybot:
         irc_name: str = ""
         error_message, discord_name, irc_name = self.dbconnect.register_player(user, xonstatsId, chattype)
 
-        if error_message == "":                           
-            if chattype == "irc":
+        if error_message == "":
+            if chattype == ChatType.IRC.value:
                 self.send_all(self.cmdresults["misc"]["registsuccess"].format(user, xonstatsId, discord_name), 
                               self.cmdresults["misc"]["registsuccess"].format(user, xonstatsId, irc_name))
-            else:
+            elif chattype == ChatType.DISCORD.value:
                 self.send_all(self.cmdresults["misc"]["registsuccess"].format(user.name, xonstatsId, discord_name), 
                               self.cmdresults["misc"]["registsuccess"].format(user.name, xonstatsId, irc_name))
+            elif chattype == ChatType.MATRIX.value:
+                # TODO: Implement Matrix connection
+                pass
+            else:
+                logger.error("Unknown chattype: ", chattype)
         else: 
             self.send_notice(user, error_message, chattype)
 
@@ -220,10 +254,10 @@ class Greedybot:
             if found_match:
                 # match with teams and captains
                 if found_match["has_teams"]:
-                    for i in range(0,len(found_match["irc"])):
-                        self.send_all(found_match["discord"][i], found_match["irc"][i])
+                    for i in range(0,len(found_match[ChatType.IRC.value])):
+                        self.send_all(found_match[ChatType.DISCORD.value][i], found_match[ChatType.IRC.value][i])
                 else:
-                    self.send_all(found_match["discord"], found_match["irc"])
+                    self.send_all(found_match[ChatType.DISCORD.value], found_match[ChatType.IRC.value])
 
             #start the background timer to delete old pickup games
             if self.picktimer is None or not self.picktimer.is_alive():
@@ -271,10 +305,10 @@ class Greedybot:
                 if found_match:
                     # match with teams and captains
                     if found_match["has_teams"]:
-                        for i in range(0,len(found_match["irc"])):
-                            self.send_all(found_match["discord"][i], found_match["irc"][i])
+                        for i in range(0,len(found_match[ChatType.IRC.value])):
+                            self.send_all(found_match[ChatType.DISCORD.value][i], found_match[ChatType.IRC.value][i])
                     else:
-                        self.send_all(found_match["discord"], found_match["irc"])
+                        self.send_all(found_match[ChatType.DISCORD.value], found_match[ChatType.IRC.value])
 
                 #start the background timer to delete old pickup games
                 if self.picktimer is None or not self.picktimer.is_alive():
@@ -329,7 +363,7 @@ class Greedybot:
         else:            
             for gametype in result.keys():
                 resultText += gametype + result[gametype]["playercount"] +": "
-                players = result[gametype]["irc"] + result[gametype]["discord"]
+                players = result[gametype][ChatType.IRC.value] + result[gametype][ChatType.DISCORD.value]
                 resultText += ", ".join(players) + " "
             self.send_notice(user, resultText, chattype)
 
@@ -447,10 +481,15 @@ class Greedybot:
         #result: "DrJaska felt the electrifying air of Seek-y's Electro combo"
         logger.info("command_kill: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
         killer = ""
-        if chattype == "irc":
+        if chattype == ChatType.IRC.value:
             killer = user
-        else:
+        elif chattype == ChatType.DISCORD.value:
             killer = user.name
+        elif chattype == ChatType.MATRIX.value:
+            # TODO: Implement Matrix connection
+            pass
+        else:
+            logger.error("Unknown chattype: ", chattype)
 
         if len(argument) > 1:    
             #get victim name        
@@ -482,7 +521,7 @@ class Greedybot:
         discord_name: str = ""
         irc_name, discord_name = self.dbconnect.toggle_player_bridge(user, chattype)
 
-        if chattype == "irc":
+        if chattype == ChatType.IRC.value:
             if user in self.muted_irc_users:
                 self.muted_irc_users.remove(user)
                 self.muted_discord_users.remove(discord_name)
@@ -491,7 +530,7 @@ class Greedybot:
                 self.muted_irc_users.append(user)
                 self.muted_discord_users.append(discord_name)
                 self.send_notice(user, "Your Message are now not bridged to discord.", chattype)
-        else:    
+        elif chattype == ChatType.DISCORD.value:
             if user.name in self.muted_discord_users:
                 self.muted_discord_users.remove(user.name)
                 self.muted_irc_users.remove(irc_name)
@@ -500,8 +539,12 @@ class Greedybot:
                 self.muted_discord_users.append(user.name)
                 self.muted_irc_users.append(irc_name)
                 self.send_notice(user, "Your Message are now not bridged to irc.", chattype)
+        elif chattype == ChatType.MATRIX.value:
+            # TODO: Implement Matrix connection
+            pass
+        else:
+            logger.error("Unknown chattype: ", chattype)
 
-    
     def command_cupstart(self, user, argument, chattype, isadmin):
         #creates cup brackets and uploads to discord
         #example: !cupstart seeky-cup Seek-y Grunt hotdog packer
@@ -515,10 +558,15 @@ class Greedybot:
         #List all current online discord-members for irc-users and vice versa
         logger.info("command_online: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
 
-        if chattype == "irc":
+        if chattype == ChatType.IRC.value:
             self.ircconnect.send_my_message("Online are: " + ", ".join(self.discordconnect.get_online_members()))
-        else:
+        elif chattype == ChatType.DISCORD.value:
             self.discordconnect.send_my_message("Online are: " + ", ".join(self.ircconnect.get_online_users()))
+        elif chattype == ChatType.MATRIX.value:
+            # TODO: Implement Matrix connection
+            pass
+        else:
+            logger.error("Unknown chattype: ", chattype)
 
     def command_lastgame(self, user, argument, chattype, isadmin):
         #Show the last played pickupgame with date and players
@@ -604,10 +652,10 @@ class Greedybot:
             if gametype in active_games_and_player.keys():
                 self.discordconnect.send_promote_message(gametype + " " + active_games_and_player[gametype]["playercount"] + " please add!", gametype)
                 gametype_subs = self.dbconnect.get_subscribed_players(gametype)
-                notify_players = [player for player in gametype_subs if player not in active_games_and_player[gametype]["irc"]]
+                notify_players = [player for player in gametype_subs if player not in active_games_and_player[gametype][ChatType.IRC.value]]
                 notify_players = [player for player in notify_players if player in online_players]
                 for notify_player in notify_players:
-                    self.send_notice(notify_player, notify_player + ": " + gametype + " " + active_games_and_player[gametype]["playercount"] + " please add!", "irc")
+                    self.send_notice(notify_player, notify_player + ": " + gametype + " " + active_games_and_player[gametype]["playercount"] + " please add!", ChatType.IRC.value)
             else:
                 logger.warning("No active pickup found for: " + gametype)
 
@@ -675,10 +723,10 @@ class Greedybot:
             result, error_message, found_match = self.dbconnect.start_pickupgame(gametype)
             if result:
                 if found_match["has_teams"]:
-                    for i in range(0,len(found_match["irc"])):
-                        self.send_all(found_match["discord"][i], found_match["irc"][i])
+                    for i in range(0,len(found_match[ChatType.IRC.value])):
+                        self.send_all(found_match[ChatType.DISCORD.value][i], found_match[ChatType.IRC.value][i])
                 else:
-                    self.send_all(found_match["discord"], found_match["irc"])
+                    self.send_all(found_match[ChatType.DISCORD.value], found_match[ChatType.IRC.value])
                 self.build_pickuptext()
             else:
                 self.send_notice(user, error_message, chattype)
