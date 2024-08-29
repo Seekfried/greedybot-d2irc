@@ -38,9 +38,11 @@ class IrcConnector(irc.bot.SingleServerIRCBot):
         self.running = False
 
     def on_nick(self, connection, event):
-            before = event.source.nick
-            after = event.target
-            self.bot.change_name(before, after)
+        before = event.source.nick
+        after = event.target
+        self.bot.change_name(before, after)
+        if self.settings["presence-update"]:
+            self.bot.discordconnect.send_my_message(before + " now known as " + after + ".")
 
     def on_part(self, connection, event):
         self.bot.remove_user_on_exit(event.source.nick, "irc")
