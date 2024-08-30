@@ -142,25 +142,27 @@ async def on_message(message):
     if should_bridge:
         content = message.clean_content
         bot.ircconnect.send_my_message("<%s> %s" % (message.author.name, content))
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        asyncio.run_coroutine_threadsafe(
-            bot.matrixconnect.send_my_message("<" + author + "> " + message), loop
-        )
+        bot.matrixconnect.send_my_message("<" + message.author.name + "> " + content)
+        # try:
+        #     loop = asyncio.get_event_loop()
+        # except RuntimeError:
+        #     loop = asyncio.new_event_loop()
+        #     asyncio.set_event_loop(loop)
+        # asyncio.run_coroutine_threadsafe(
+        #     bot.matrixconnect.send_my_message("<" + message.author.name + "> " + content), loop
+        # )
 
         for attachment in message.attachments:
             bot.ircconnect.send_my_message("URL: " + attachment.url)
-            try:
-                loop = asyncio.get_event_loop()
-            except RuntimeError:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-            asyncio.run_coroutine_threadsafe(
-                bot.matrixconnect.send_my_message("<" + author + "> " + message), loop
-            )
+            bot.matrixconnect.send_my_message("<" + message.author.name + "> " + "URL: " + attachment.url)
+            # try:
+            #     loop = asyncio.get_event_loop()
+            # except RuntimeError:
+            #     loop = asyncio.new_event_loop()
+            #     asyncio.set_event_loop(loop)
+            # asyncio.run_coroutine_threadsafe(
+            #     bot.matrixconnect.send_my_message("<" + message.author.name + "> " + "URL: " + attachment.url), loop
+            # )
 
     if message.content.startswith('!'):
         if settings["modrole"] in [y.name.lower() for y in message.author.roles]:

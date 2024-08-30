@@ -18,6 +18,11 @@ class MatrixConnector:
     async def start(self) -> None:
         self.client: AsyncClient = AsyncClient(self.server, self.botname)
         self.client.add_event_callback(self.message_callback, RoomMessageText)
+        try:
+            self.loop = asyncio.get_event_loop()
+        except RuntimeError:
+            self.loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(self.loop)
         
         response = await self.client.login(self.password)
         
@@ -47,9 +52,12 @@ class MatrixConnector:
                 self.bot.ircconnect.send_my_message("<"+ room.user_name(event.sender) + "> " + event.body)
                 self.bot.discordconnect.send_my_message("<"+ room.user_name(event.sender) + "> " + event.body)  
     
-    async def send_my_message(self,message):
+    async def send_my_message_async(self,message):
         await self.client.room_send(
             room_id=self.room,
             message_type="m.room.message",
             content={"msgtype": "m.text", "body": message})
+    
+    def send_my_message(self,message):
+        asyncio.run_coroutine_threadsafe(self.send_my_message_async(message), self.loop)
 

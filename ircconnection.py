@@ -1,6 +1,5 @@
 import irc.bot
 import re
-import asyncio
 from utils import create_logger
 
 logger = create_logger(__name__)
@@ -99,14 +98,15 @@ class IrcConnector(irc.bot.SingleServerIRCBot):
                 self.bot.send_command(author, message, "irc", False)            
         elif should_bridge:
             self.bot.discordconnect.send_my_message_with_mention("<" + author + "> " + message)
-            try:
-                loop = asyncio.get_event_loop()
-            except RuntimeError:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-            asyncio.run_coroutine_threadsafe(
-                self.bot.matrixconnect.send_my_message("<" + author + "> " + message), loop
-            )
+            self.bot.matrixconnect.send_my_message("<"+ author + "> " + message)
+            # try:
+            #     loop = asyncio.get_event_loop()
+            # except RuntimeError:
+            #     loop = asyncio.new_event_loop()
+            #     asyncio.set_event_loop(loop)
+            # asyncio.run_coroutine_threadsafe(
+            #     self.bot.matrixconnect.send_my_message("<" + author + "> " + message), loop
+            # )
     
     def run(self):
         self.start()
