@@ -141,16 +141,11 @@ async def on_message(message):
     
     if should_bridge:
         content = message.clean_content
-        bot.ircconnect.send_my_message("<%s> %s" % (message.author.name, content))
+        for line in content.splitlines():
+            if line.strip() != "":
+                bot.ircconnect.send_my_message("<@%s (%s)> %s" % (message.author.name, message.author.display_name, line))
         bot.matrixconnect.send_my_message("<" + message.author.name + "> " + content)
-        # try:
-        #     loop = asyncio.get_event_loop()
-        # except RuntimeError:
-        #     loop = asyncio.new_event_loop()
-        #     asyncio.set_event_loop(loop)
-        # asyncio.run_coroutine_threadsafe(
-        #     bot.matrixconnect.send_my_message("<" + message.author.name + "> " + content), loop
-        # )
+
 
         for attachment in message.attachments:
             bot.ircconnect.send_my_message("URL: " + attachment.url)
@@ -172,11 +167,13 @@ async def on_message(message):
 
 @client.event
 async def on_presence_update(before, after):
+    global settings
     if after.status.name == "offline":
         bot.remove_user_on_exit(after, "discord")
-    #pass #todo delete pickup if going offline
-    # await channel.send(f"""{after}'s activity changed from {before.status} to {after.status}""")
-    # bot.ircconnect.send_my_message(f"""{after}'s activity changed from {before.status} to {after.status}""")
+        if settings["presence-update"]:
+            bot.ircconnect.send_my_message("- @%s (%s) is now offline -" % (after.name, after.display_name))
+    if before.status.name == "offline" and settings["presence-update"]:
+        bot.ircconnect.send_my_message("- @%s (%s) is now online -" % (after.name, after.display_name))
 
 @client.event
 async def on_ready():
