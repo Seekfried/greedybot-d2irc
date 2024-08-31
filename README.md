@@ -11,7 +11,7 @@ A pickupbot for managing Xonotic pickup games
 
 **Note**: greedybot-d2irc requires Python >= 3.9, as it depends on [numpy 2.0.0](https://numpy.org/) and [discord.py](https://github.com/Rapptz/discord.py).
 
-Download the code from this repository and configure setting.json (see [Configuration](https://github.com/Seekfried/greedybot-d2irc#configuration))
+Download the code from this repository and configure setting.yaml (see [Configuration](https://github.com/Seekfried/greedybot-d2irc#configuration))
 
 Install python dependencies
 ```bash
@@ -30,45 +30,71 @@ that, it will also read the `gametypes.json` file to populate the database with 
 
 First you need to create a Discord bot user, which you can do by following the instructions [here](https://github.com/reactiflux/discord-irc/wiki/Creating-a-discord-bot-&-getting-a-token).
 
-The token is needed for the `settings.json` file.
+The token is needed for the `settings.yaml` file.
 
 To get the **server and channel ID** of your discord, just go to your discord server and write down the IDs found in the URL. **(Example below)**
 
 ![server-channel](https://i.imgur.com/MUbxESc.png)
 
-### Settings.json
-```js
-{
-    "irc": {
-        "server": "",       //IRC-Server address
-        "port": "",         //IRC-Server port
-        "password": "",     //IRC-Server auth password
-        "channel": "#",     //Your IRC-Channelname
-        "nickname": "",     //IRC-Nickname for the bot
-        "botowner": "",     //IRC-User that can close the bot with the !quit command
-        "quitmsg": "Cya!",  //IRC quit message
-        "presence-update": false    //Show messages if irc user left/joined the channel
-    },
-    "discord": {
-        "token": "",        //Discord bot's token
-        "botowner": "",     //Discord-User that can close the bot with the !quit command
-        "server": "",       //Discord server ID
-        "channel": "",      //Discord channel ID
-        "modrole": "mods",  //Discord rolename to enable Admin/Moderator commands for users
-        "presence-update": false    //Show messages if discord user goes offline/online
-    },
-    "bot": {
-        "pugtimewarning": 2400,     //time in seconds, to warn player that pickup is going to expire
-        "pugtimeout": 3600,         //time in seconds, that pickup is expired
-        "browser": "chrome"         //Browser used for cup generation "chrome", "edge", "chromium"
-    },
-    "database":{
-        "filename": "pickups.db"     //Name of the SQLite File
-    }
-}
+### Settings.yaml
+```yaml
+bot:
+  # Issue warning to renew pickup to player after x seconds
+  pugtimewarning: 2400 
+  # Delete player from pickup after x seconds
+  pugtimeout: 3600
+  # Used webrowser to create cup pictures possible options: chrome, chromium or edge
+  browser: "chrome"
+
+database:
+  # Name of created SQLite file
+  filename: "pickups.db"
+
+# You can comment out/delete the following chattypes you dont need
+irc:
+  # IRC-Server address
+  server: ""
+  # IRC-Server port
+  port: ""
+  # IRC-Server auth password
+  password: ""
+  # IRC-Channelname
+  channel: ""
+  # IRC-Nickname for the bot
+  nickname: ""
+  # IRC-User that can close the bot with the !quit command
+  botowner: ""
+  # IRC quit message
+  quitmsg: "Cya!"
+  # Show messages if irc user left/joined the channel
+  presence-update: false
+
+discord:
+  # Discord bot's token
+  token: ""
+  # Discord-User that can close the bot with the !quit command
+  botowner: ""
+  # Discord server ID
+  server: ""
+  # Discord channel ID
+  channel: ""
+  # Discord rolename to enable Admin/Moderator commands for users
+  modrole: ""
+  # Show messages if discord user goes offline/online
+  presence-update: false
+
+matrix:
+  # Matrix server url
+  server: ""
+  # Matrix room ID
+  room: ""
+  # Matrix bot name
+  botname: ""
+  # Matrix bot password
+  password: ""
 ```
 
-You can create your own `settings.json` file based on the template `settings_template.json`.
+You can create your own `settings.yaml` file based on the template `settings_template.yaml`.
 
 There are three other different setting files:
 - **cmdresult.json**: command output texts and help texts
@@ -99,7 +125,7 @@ There are three other different setting files:
 - **!top10**: Show the top 10 players who have participated the most in the last 30 days in the given game types. If no game types are provided, it returns the overall: `!top10 [<gametype>]`
 
 ### Admin/Moderator commands
-*For discord-users with the role specific to `settings.json` (modrole) or IRC-users with OP*
+*For discord-users with the role specific to `settings.yaml` (modrole) or IRC-users with OP*
 - **!push**: add specific player to pickup games: `!push <player> [<gametype]>`
 - **!pull**: remove specific player from pickup games: `!pull [<players>]`
 - **!addgametype**: To add gametype: `!addgametype <gametypename> <playercount> <teamcount> <statsname>`

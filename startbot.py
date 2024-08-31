@@ -1,10 +1,10 @@
 from greedybot import Greedybot
 import json
+import yaml
 
-# Get the bot settings from settings.json
-f = open("settings.json", encoding="utf-8")
-settings = json.loads(f.read())
-f.close()
+# Get the bot settings from settings.yaml
+with open('settings.yaml','r', encoding="utf-8") as f:
+        settings = yaml.safe_load(f)
 
 # Get the bot messagetexts from cmdresults.json
 f = open("cmdresults.json", encoding="utf-8")

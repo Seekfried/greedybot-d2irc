@@ -150,4 +150,5 @@ cython_debug/
 
 # settings.json will be ignored
 /settings.json
+/settings.yaml
 
