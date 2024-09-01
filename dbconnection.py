@@ -512,10 +512,9 @@ class DatabaseConnector:
         for game in games:
             result += game.gametypeId.title + " (" + str(len(game.addedplayers)) + "/" + str(game.gametypeId.playerCount) + ") "
         
-        result.rstrip() #blamepacker and never delete this comment        
         db.close()
-        return result
-       
+        return result.rstrip() #blamepacker and never delete this comment
+
     def get_server(self, servername = None) -> tuple[bool, str]:
         db_logger.info("get_server: servername=%s", servername)
         result: str = ""

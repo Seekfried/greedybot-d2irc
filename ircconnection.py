@@ -6,7 +6,6 @@ logger = create_logger(__name__)
 
 # Based on ircc.py from https://github.com/milandamen/Discord-IRC-Python
 
-
 class IrcConnector(irc.bot.SingleServerIRCBot):    
     def __init__(self, settings, fbot):
         self.settings = settings

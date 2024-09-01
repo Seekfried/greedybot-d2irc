@@ -7,9 +7,11 @@ class Players(Model):
     ircName = CharField(unique=True, null=True)
     discordName = CharField(unique=True, null=True)
     discordMention = CharField(unique=True, null=True)
+    matrixName = CharField(unique=True, null=True)
     statsName = CharField(null=True)
     statsIRCName = CharField(null=True)
     statsDiscordName = CharField(null=True)
+    statsMatrixName = CharField(null=True)
     statsId = IntegerField(unique=True, null=True)
     shouldBridge = BooleanField(default=True)
 

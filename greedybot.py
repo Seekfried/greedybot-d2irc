@@ -31,42 +31,29 @@ class Greedybot:
         self.muted_discord_users, self.muted_irc_users = self.dbconnect.get_unbridged_players()
 
     async def run(self):
-        if self.settings[ChatType.IRC.value]:
+        
+        self.irc_enabled: bool = self.settings[ChatType.IRC.value] is not None
+        self.discord_enabled: bool = self.settings[ChatType.DISCORD.value] is not None
+        self.matrix_enabled: bool = self.settings[ChatType.MATRIX.value] is not None
+        
+        
+        if self.irc_enabled:
             self.ircconnect = IrcConnector(self.settings[ChatType.IRC.value], self)
             t1 = threading.Thread(target=self.ircconnect.run)
             t1.daemon = True                                    # Thread dies when main thread (only non-daemon thread) exits.
             t1.start()
         
-        if self.settings[ChatType.DISCORD.value]:
+        if self.discord_enabled:
             self.discordconnect = DiscordConnector(self.settings[ChatType.DISCORD.value], self)
             
-        if self.settings[ChatType.MATRIX.value]:
+        if self.matrix_enabled:
             self.matrixconnect = MatrixConnector(self.settings[ChatType.MATRIX.value], self)
-
-
-        # t2 = threading.Thread(target=self.discordconnect.run)
-        # t2.daemon = True                                    # Thread dies when main thread (only non-daemon thread) exits.
-        # t2.start()
-        # loop = asyncio.new_event_loop()
-        # asyncio.set_event_loop(loop)
-        # t3 = threading.Thread(target=self.matrixconnect.run, args=(loop,))
-        # t3.start()
-        # try:
-        #     # Start the event loop
-        #     loop.run_forever()
-        # finally:
-        #     # Cleanup
-        #     loop.call_soon_threadsafe(loop.stop)  # Stop the loop when done
-        #     t3.join()
-        # #self.matrixconnect.run()
-        # #asyncio.run(self.matrixconnect.start())
-        # #self.discordconnect.run()
 
         discord = asyncio.create_task(client.start(self.settings[ChatType.DISCORD.value]["token"]))
         matrix = asyncio.create_task(self.matrixconnect.start())
         await discord
         await matrix
-
+        
     async def run_async(self):
         global client
         await asyncio.gather(self.matrixconnect.start(), client.start(self.settings[ChatType.DISCORD.value]["token"]))
@@ -142,24 +129,23 @@ class Greedybot:
         else:
             logger.error("Unknown chattype: ", chattype)
 
-    def send_all(self, message, ircmessage = None, matrixmessage = None):
-        #sends message to all (irc and discord)
-        logger.info("send_all: message=%s, ircmessage=%s", message, ircmessage)
-        if ircmessage is not None:
-            self.ircconnect.send_my_message(ircmessage)
-        else:
-            self.ircconnect.send_my_message(message)
-        if matrixmessage is not None:
-            if not asyncio.get_event_loop().is_running():
-                asyncio.run(self.matrixconnect.send_my_message(matrixmessage))
+    async def send_all(self, chattype, message, ircmessage = None, matrixmessage = None):
+        logger.info("send_all: message=%s, ircmessage=%s, matrixmessage=%s", message, ircmessage, matrixmessage)
+        
+        if self.irc_enabled and chattype != ChatType.IRC.value:
+            if ircmessage is not None:
+                self.ircconnect.send_my_message(ircmessage)
             else:
-                asyncio.get_event_loop().create_task(self.matrixconnect.send_my_message(matrixmessage))
-        else:
-            if not asyncio.get_event_loop().is_running():
-                asyncio.run(self.matrixconnect.send_my_message(message))
+                self.ircconnect.send_my_message(message)
+                
+        if self.matrix_enabled and chattype != ChatType.MATRIX.value:
+            if matrixmessage is not None:
+                await self.matrixconnect.send_my_message(matrixmessage)
             else:
-                asyncio.get_event_loop().create_task(self.matrixconnect.send_my_message(message))
-        self.discordconnect.send_my_message(message)
+                await self.matrixconnect.send_my_message(message)
+        
+        if self.discord_enabled and chattype != ChatType.DISCORD.value:        
+            self.discordconnect.send_my_message(message)
 
     def wrong_command(self, user, argument, chattype, isadmin):
         #if user inputs wrong command
@@ -197,12 +183,12 @@ class Greedybot:
 
         if not games_exists and self.pickupText != "Pickups: ":            
             self.pickupText = "Pickups: " 
-            self.send_all(self.pickupText)     
+            self.send_all(None, self.pickupText)     
             self.set_irc_topic()  
         else:
             self.pickupText = "Pickups: "
             self.pickupText += pickuptext_new
-            self.send_all(self.pickupText)
+            self.send_all(None, self.pickupText)
             self.set_irc_topic()
         return self.pickupText
     """
