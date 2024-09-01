@@ -1,0 +1,54 @@
+bot:
+  # Issue warning to renew pickup to player after x seconds
+  pugtimewarning: 2400 
+  # Delete player from pickup after x seconds
+  pugtimeout: 3600
+  # Used webrowser to create cup pictures possible options: chrome, chromium or edge
+  browser: "chrome"
+
+database:
+  # Name of created SQLite file
+  filename: "pickups.db"
+
+# You can comment out/delete the following chattypes you dont need
+irc:
+  # IRC-Server address
+  server: ""
+  # IRC-Server port
+  port: ""
+  # IRC-Server auth password
+  password: ""
+  # IRC-Channelname
+  channel: ""
+  # IRC-Nickname for the bot
+  nickname: ""
+  # IRC-User that can close the bot with the !quit command
+  botowner: ""
+  # IRC quit message
+  quitmsg: "Cya!"
+  # Show messages if irc user left/joined the channel
+  presence-update: false
+
+discord:
+  # Discord bot's token
+  token: ""
+  # Discord-User that can close the bot with the !quit command
+  botowner: ""
+  # Discord server ID
+  server: ""
+  # Discord channel ID
+  channel: ""
+  # Discord rolename to enable Admin/Moderator commands for users
+  modrole: ""
+  # Show messages if discord user goes offline/online
+  presence-update: false
+
+matrix:
+  # Matrix server url
+  server: ""
+  # Matrix room ID
+  room: ""
+  # Matrix bot name
+  botname: ""
+  # Matrix bot password
+  password: ""
