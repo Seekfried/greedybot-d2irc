@@ -148,7 +148,7 @@ async def on_message(message):
 
 
         for attachment in message.attachments:
-            bot.ircconnect.send_my_message("URL: " + attachment.url)
+            bot.ircconnect.send_my_message(f"<@{message.author.name} ({message.author.display_name})> URL: " + attachment.url)
             bot.matrixconnect.send_my_message("<" + message.author.name + "> " + "URL: " + attachment.url)
             # try:
             #     loop = asyncio.get_event_loop()

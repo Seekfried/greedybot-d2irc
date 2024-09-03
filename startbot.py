@@ -7,6 +7,7 @@ import yaml
 with open('settings.yaml','r', encoding="utf-8") as f:
         settings = yaml.safe_load(f)
 
+print(settings)
 # Get the bot messagetexts from cmdresults.json
 f = open("cmdresults.json", encoding="utf-8")
 cmdresults = json.loads(f.read())
