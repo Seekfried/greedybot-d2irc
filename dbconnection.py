@@ -149,7 +149,16 @@ class DatabaseConnector:
 
         for game in games:
             if len(game.addedplayers) == 0:
-                game.delete_instance()        
+                game.delete_instance()
+
+    def __renew_all_player_entries(self, player):
+        if player is not None:
+            gameentries = self.__get_active_player_entries(player)
+        
+        for gameentry in gameentries:
+            gameentry.isWarned = False
+            gameentry.addedDate = datetime.now()
+            gameentry.save()        
         
     def __withdraw_player_from_all(self, player) -> bool:
         #check if player is already in database
@@ -233,6 +242,7 @@ class DatabaseConnector:
                                     found_match = deepcopy(found)
                             else:
                                 error_message.append("Already added for " + pickentry.gameId.gametypeId.title)
+                        self.__renew_all_player_entries(player)
                 #add with gametypes
                 #example: !add duel 2v2tdm
                 else:
@@ -245,7 +255,13 @@ class DatabaseConnector:
                                 game.save()
                             pickentry = PickupEntries.select().where(PickupEntries.playerId == player.id, PickupEntries.gameId == game.id).first()
                             if pickentry is None:
-                                pickentry = PickupEntries(playerId=player.id, gameId=game.id, addedFrom=chattype)
+                                __addedFrom: str = chattype
+                                if recipient is not None:
+                                    if player.ircName:
+                                        __addedFrom = "irc"
+                                    else:
+                                        __addedFrom = "discord"
+                                pickentry = PickupEntries(playerId=player.id, gameId=game.id, addedFrom=__addedFrom)
                                 pickentry.save()
                                 result = True
                                 found = self.__get_found_matchtext(game)
@@ -254,6 +270,7 @@ class DatabaseConnector:
                                         found_match = deepcopy(found)
                             else:
                                 error_message.append("Already added for " + pickentry.gameId.gametypeId.title)
+                    self.__renew_all_player_entries(player)
             else:
                 if recipient is not None:
                     error_message.append(recipient + " needs to register first (!register) to be added for games!")
