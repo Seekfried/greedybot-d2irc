@@ -31,11 +31,9 @@ class Greedybot:
         self.muted_discord_users, self.muted_irc_users = self.dbconnect.get_unbridged_players()
 
     async def run(self):
-        
         self.irc_enabled: bool = self.settings[ChatType.IRC.value] is not None
         self.discord_enabled: bool = self.settings[ChatType.DISCORD.value] is not None
         self.matrix_enabled: bool = self.settings[ChatType.MATRIX.value] is not None
-        
         
         if self.irc_enabled:
             self.ircconnect = IrcConnector(self.settings[ChatType.IRC.value], self)
@@ -45,18 +43,28 @@ class Greedybot:
         
         if self.discord_enabled:
             self.discordconnect = DiscordConnector(self.settings[ChatType.DISCORD.value], self)
+            self.discord_task = asyncio.create_task(client.start(self.settings[ChatType.DISCORD.value]["token"]))
             
         if self.matrix_enabled:
             self.matrixconnect = MatrixConnector(self.settings[ChatType.MATRIX.value], self)
+            self.matrix_task = asyncio.create_task(self.matrixconnect.start())
 
-        discord = asyncio.create_task(client.start(self.settings[ChatType.DISCORD.value]["token"]))
-        matrix = asyncio.create_task(self.matrixconnect.start())
-        await discord
-        await matrix
-        
-    async def run_async(self):
-        global client
-        await asyncio.gather(self.matrixconnect.start(), client.start(self.settings[ChatType.DISCORD.value]["token"]))
+        if self.discord_enabled and self.matrix_enabled:
+            await asyncio.gather(self.discord_task, self.matrix_task)
+            # await self.discord_task
+            # await self.matrix_task
+        elif self.discord_enabled:
+            await self.discord_task
+        elif self.matrix_enabled:
+            await self.matrix_task
+
+    def close(self):
+        if self.discord_enabled:
+            self.discord_task.cancel()
+        if self.matrix_enabled:
+            self.matrix_task.cancel()
+        if self.irc_enabled:
+            self.ircconnect.close()
     
     def start_pugtimer(self):
         #background timer to warn players of expiring pickup games or deletes old pickup games
@@ -129,23 +137,46 @@ class Greedybot:
         else:
             logger.error("Unknown chattype: ", chattype)
 
-    async def send_all(self, chattype, message, ircmessage = None, matrixmessage = None):
-        logger.info("send_all: message=%s, ircmessage=%s, matrixmessage=%s", message, ircmessage, matrixmessage)
+    def send_all(self, message:str, ircmessage:str = None, matrixmessage:str = None, chattype:str = None, messagehead:str = None, discordmention:bool = False):
+        logger.info("send_all: message=%s, ircmessage=%s, matrixmessage=%s, chattype=%s, messagehead=%s, discordmention=%s", 
+                    message, ircmessage, matrixmessage, chattype, messagehead, discordmention)
         
-        if self.irc_enabled and chattype != ChatType.IRC.value:
-            if ircmessage is not None:
-                self.ircconnect.send_my_message(ircmessage)
-            else:
-                self.ircconnect.send_my_message(message)
-                
-        if self.matrix_enabled and chattype != ChatType.MATRIX.value:
-            if matrixmessage is not None:
-                await self.matrixconnect.send_my_message(matrixmessage)
-            else:
-                await self.matrixconnect.send_my_message(message)
-        
-        if self.discord_enabled and chattype != ChatType.DISCORD.value:        
-            self.discordconnect.send_my_message(message)
+        if messagehead:
+            if self.irc_enabled and chattype != ChatType.IRC.value:
+                if ircmessage is not None:
+                    self.ircconnect.send_my_message(ircmessage, messagehead)
+                else:
+                    self.ircconnect.send_my_message(message, messagehead)
+                    
+            if self.matrix_enabled and chattype != ChatType.MATRIX.value:
+                if matrixmessage is not None:
+                    self.matrixconnect.send_my_message(messagehead + matrixmessage)
+                else:
+                    self.matrixconnect.send_my_message(messagehead + message)
+            
+            if self.discord_enabled and chattype != ChatType.DISCORD.value:
+                if discordmention:
+                    self.discordconnect.send_my_message_with_mention(messagehead + message)
+                else:
+                    self.discordconnect.send_my_message(messagehead + message)
+        else:
+            if self.irc_enabled and chattype != ChatType.IRC.value:
+                if ircmessage is not None:
+                    self.ircconnect.send_my_message(ircmessage)
+                else:
+                    self.ircconnect.send_my_message(message)
+                    
+            if self.matrix_enabled and chattype != ChatType.MATRIX.value:
+                if matrixmessage is not None:
+                    self.matrixconnect.send_my_message(matrixmessage)
+                else:
+                    self.matrixconnect.send_my_message(message)
+            
+            if self.discord_enabled and chattype != ChatType.DISCORD.value:
+                if discordmention:
+                    self.discordconnect.send_my_message_with_mention(message)
+                else:
+                    self.discordconnect.send_my_message(message)
 
     def wrong_command(self, user, argument, chattype, isadmin):
         #if user inputs wrong command
@@ -183,12 +214,12 @@ class Greedybot:
 
         if not games_exists and self.pickupText != "Pickups: ":            
             self.pickupText = "Pickups: " 
-            self.send_all(None, self.pickupText)     
+            self.send_all(self.pickupText)
             self.set_irc_topic()  
         else:
             self.pickupText = "Pickups: "
             self.pickupText += pickuptext_new
-            self.send_all(None, self.pickupText)
+            self.send_all(self.pickupText)
             self.set_irc_topic()
         return self.pickupText
     """
@@ -675,10 +706,12 @@ class Greedybot:
         #Get random quote from quoteDB or with playername from specific player
         logger.info("command_quote: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
         quotelines: list[str] = []
+        message: str = ""
         q_player: str = argument[1] if len(argument) > 1 else None
         quotelines = get_quote(q_player)
         for line in quotelines:
-            self.send_all("Quote: \"" + line + "\"")
+            message += "Quote: \"" + line + "\"\n"
+        self.send_all(message=message)
 
     def command_serverinfo(self, user, argument, chattype, isadmin):
         #Get infos from server like name, map, player, gametype

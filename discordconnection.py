@@ -1,6 +1,7 @@
 import logging
 import discord
 import asyncio
+from chattype import ChatType
 from utils import create_logger
 from xonotic.utils import strip_irc_colors
 
@@ -126,7 +127,7 @@ async def on_message(message):
     # Don't reply to itself, except cup pictures
     if message.author == client.user:
         if len(message.attachments) > 0:
-            bot.ircconnect.send_my_message('Cup: ' + message.attachments[0].url)
+            bot.send_all(message="Cup: " + message.attachments[0].url, chattype=ChatType.DISCORD.value)
         return
     
     if message.channel != channel:
@@ -141,23 +142,10 @@ async def on_message(message):
     
     if should_bridge:
         content = message.clean_content
-        for line in content.splitlines():
-            if line.strip() != "":
-                bot.ircconnect.send_my_message("<@%s (%s)> %s" % (message.author.name, message.author.display_name, line))
-        bot.matrixconnect.send_my_message("<" + message.author.name + "> " + content)
-
+        bot.send_all(message=content, chattype=ChatType.DISCORD.value, messagehead=f"<@{message.author.name} ({message.author.display_name})>")
 
         for attachment in message.attachments:
-            bot.ircconnect.send_my_message(f"<@{message.author.name} ({message.author.display_name})> URL: " + attachment.url)
-            bot.matrixconnect.send_my_message("<" + message.author.name + "> " + "URL: " + attachment.url)
-            # try:
-            #     loop = asyncio.get_event_loop()
-            # except RuntimeError:
-            #     loop = asyncio.new_event_loop()
-            #     asyncio.set_event_loop(loop)
-            # asyncio.run_coroutine_threadsafe(
-            #     bot.matrixconnect.send_my_message("<" + message.author.name + "> " + "URL: " + attachment.url), loop
-            # )
+            bot.send_all(message=attachment.url, chattype=ChatType.DISCORD.value, messagehead=f"<@{message.author.name} ({message.author.display_name})> URL: ")
 
     if message.content.startswith('!'):
         if settings["modrole"] in [y.name.lower() for y in message.author.roles]:
@@ -171,9 +159,9 @@ async def on_presence_update(before, after):
     if after.status.name == "offline":
         bot.remove_user_on_exit(after, "discord")
         if settings["presence-update"]:
-            bot.ircconnect.send_my_message("- @%s (%s) is now offline -" % (after.name, after.display_name))
+            bot.send_all(message="- @%s (%s) is now offline -" % (after.name, after.display_name), chattype=ChatType.DISCORD.value)
     if before.status.name == "offline" and settings["presence-update"]:
-        bot.ircconnect.send_my_message("- @%s (%s) is now online -" % (after.name, after.display_name))
+        bot.send_all(message="- @%s (%s) is now online -" % (after.name, after.display_name), chattype=ChatType.DISCORD.value)
 
 @client.event
 async def on_ready():

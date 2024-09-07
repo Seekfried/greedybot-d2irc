@@ -1,5 +1,6 @@
 import asyncio
 import time
+from chattype import ChatType
 from nio import AsyncClient, MatrixRoom, RoomMessageText, LoginResponse
 from utils import create_logger
 
@@ -49,8 +50,7 @@ class MatrixConnector:
             if event_timestamp > self.start_time:
                 # Process the new message
                 logger.info(f"New message in {room.display_name} : {event.body}")
-                self.bot.ircconnect.send_my_message("<"+ room.user_name(event.sender) + "> " + event.body)
-                self.bot.discordconnect.send_my_message("<"+ room.user_name(event.sender) + "> " + event.body)  
+                self.bot.send_all(message=event.body, chattype=ChatType.MATRIX.value, messagehead="<"+ room.user_name(event.sender) + "> ", discordmention=True)
     
     async def send_my_message_async(self,message):
         await self.client.room_send(
