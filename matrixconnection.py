@@ -38,7 +38,7 @@ class MatrixConnector:
             logger.info("Failed to log in:", response)
     
     async def message_callback(self, room: MatrixRoom, event: RoomMessageText) -> None:
-        logger.info(f"Message received in {room.display_name} : {event.body}")
+        logger.info(f"Message received in {room.display_name} : {event.sender} : {event.body}")
         if event.sender == self.botname:
             return
         # Check if the event is a message (e.g., text message)
@@ -50,7 +50,7 @@ class MatrixConnector:
             if event_timestamp > self.start_time:
                 # Process the new message
                 logger.info(f"New message in {room.display_name} : {event.body}")
-                self.bot.send_all(message=event.body, chattype=ChatType.MATRIX.value, messagehead="<"+ room.user_name(event.sender) + "> ", discordmention=True)
+                self.bot.send_all(message=event.body, chattype=ChatType.MATRIX.value, messagehead="<"+ event.sender + "> ", discordmention=True)
     
     async def send_my_message_async(self,message):
         await self.client.room_send(
