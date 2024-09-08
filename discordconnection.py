@@ -142,7 +142,7 @@ async def on_message(message):
     
     if should_bridge:
         content = message.clean_content
-        bot.send_all(message=content, chattype=ChatType.DISCORD.value, messagehead=f"<@{message.author.name} ({message.author.display_name})>")
+        bot.send_all(message=content, chattype=ChatType.DISCORD.value, messagehead=f"<@{message.author.name} ({message.author.display_name})> ")
 
         for attachment in message.attachments:
             bot.send_all(message=attachment.url, chattype=ChatType.DISCORD.value, messagehead=f"<@{message.author.name} ({message.author.display_name})> URL: ")
