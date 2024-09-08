@@ -23,7 +23,7 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
   migrator.add_fields('servers', serverIPv6=pw.CharField(unique=True, null=True))
   
 def rollback(migrator: Migrator, database: pw.Database, *, fake=False):
-  migrator.drop_column('servers', 'serverIPv6')
+  migrator.remove_fields('servers', 'serverIPv6')
   migrator.rename_field('servers', 'serverIPv4', 'serverIp')
   migrator.change_fields('servers', serverIp=pw.CharField(unique=True))
 
