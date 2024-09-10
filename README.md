@@ -3,9 +3,8 @@ A pickupbot for managing Xonotic pickup games
 
 ### Features:
 - Managing pickup games over IRC and Discord (**maybe Matrix in the Future**)
-- sync messages between IRC and Discord, with command for users to disable bridge function (**privacy reasons**)
+- sync messages between IRC, Discord and Matrix, with command for users to disable bridge function (**privacy reasons**)
 - saving Players/Games/Gametypes/Servers in sqlite (**through peewee mysql, postgresql and cockroachdb possible too**)
-- command for cup bracket generation (**needs chromium-based browser installed**)
 
 ## Installation and usage
 
@@ -43,8 +42,6 @@ bot:
   pugtimewarning: 2400 
   # Delete player from pickup after x seconds
   pugtimeout: 3600
-  # Used webrowser to create cup pictures possible options: chrome, chromium or edge
-  browser: "chrome"
 
 database:
   # Name of created SQLite file
@@ -132,11 +129,3 @@ There are three other different setting files:
 - **!addserver**: To add server: `!addserver <servername> <ip:port> [<ip:port>]`
 - **!removegametype**: To delete gametype: `!removegametype [<gametypename>]`
 - **!removeserver**: To delete server: `!removeserver [<servername>]`
-
-### Cup Generation
-- at the moment just direct cup generation with **!cupstart** (future feature -> with player signing in themselves)
-- **!cupstart**: To generate cup brackets: `!cupstart <cuptitle> [<players/teams>]`
-
-**example: !cupstart seeky-cup grunt hotdog ramses packer mirio**
-
-![cup-generator](https://i.imgur.com/XqH5OXm.png)
