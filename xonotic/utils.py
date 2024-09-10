@@ -120,6 +120,51 @@ def irc_colors(qstr: str) -> str:
     result += "\017"
     return result
 
+def matrix_colors(qstr: str) -> str:
+    _matrix_colors = { "#000",
+                       "#f00",
+                       "#0f0",
+                       "#ff0",
+                       "#00f",
+                       "#0ff",
+                       "#f0f",
+                       "#fff",
+                       "#000",
+                       "#888" 
+                    }
+    _all_colors = re.compile(r'(\^\d|\^x[\dA-Fa-f]{3})')
+    #qstr = ''.join([ x if ord(x) < 128 else '' for x in qstr ]).replace('^^', '^').replace(u'\x00', '') # strip weird characters
+    parts = _all_colors.split(qstr)
+    result = ""
+    oldcolor = None
+    while len(parts) > 0:
+        tag = None
+        txt = parts[0]
+        if _all_colors.match(txt):
+            tag = txt[1:]  # strip leading '^'
+            if len(parts) < 2:
+                break
+            txt = parts[1]
+            del parts[1]
+        del parts[0]
+
+        if not txt or len(txt) == 0:
+            # only colorcode and no real text, skip this
+            continue
+
+        color = 0
+        if tag:
+            if len(tag) == 4 and tag[0] == 'x':
+                color = "<font color=\"" + tag[1:] + "\">"
+            elif len(tag) == 1 and int(tag[0]) in range(0,9):
+                color = "<font color=\"" + _matrix_colors[int(tag[0])] + "\">"
+        if color != oldcolor:
+            result += color + "</font>"
+        result += txt
+        oldcolor = color
+    return result
+
+
 def strip_irc_colors(message: str) -> str:
     color_code_pattern = re.compile('\x03(?:[0-9]{0,2}(?:,[0-9]{1,2})?)|\x0f')
     message_stripped = color_code_pattern.sub('', message)

@@ -240,7 +240,7 @@ class Greedybot:
         error_message: str = ""
         discord_name: str = ""
         irc_name: str = ""
-        error_message, discord_name, irc_name = self.dbconnect.register_player(user, xonstatsId, chattype)
+        error_message, discord_name, irc_name, matrix_name = self.dbconnect.register_player(user, xonstatsId, chattype)
 
         if error_message == "":
             if chattype == ChatType.IRC.value:

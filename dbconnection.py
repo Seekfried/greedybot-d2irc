@@ -704,11 +704,12 @@ class DatabaseConnector:
         db.close()
         return mindiff, has_break, has_new_text, warn_user
     
-    def register_player(self, user, xonstatId, chattype) -> tuple[str, str, str]:
+    def register_player(self, user, xonstatId, chattype) -> tuple[str, str, str, str]:
         db_logger.info("register_player: user=%s, xonstatId=%s, chattype=%s", user, xonstatId, chattype)
         error_result: str = ""
         irc_name: str = ""
         discord_name: str = ""
+        matrix_name: str = ""
 
         db.connect()
         if xonstatId and xonstatId.isdigit():
@@ -726,10 +727,12 @@ class DatabaseConnector:
                                         statsId = xonstatId, 
                                         statsName = xonstatsname, 
                                         statsIRCName = irc_colors(xonstatscoloredname), 
-                                        statsDiscordName = discord_colors(xonstatscoloredname))
+                                        statsDiscordName = discord_colors(xonstatscoloredname),
+                                        statsMatrixName = matrix_colors(xonstatscoloredname))
                             pl.save()
                             irc_name = pl.statsIRCName
                             discord_name = pl.statsDiscordName
+                            matrix_name = pl.statsMatrixName
                         else:
                             if irc_player == pl:
                                 error_result = "Already registered with Xonstat account #" + xonstatId
@@ -738,9 +741,11 @@ class DatabaseConnector:
                                 irc_player.statsId = xonstatId
                                 irc_player.statsIRCName = irc_colors(xonstatscoloredname)
                                 irc_player.statsDiscordName = discord_colors(xonstatscoloredname)
+                                irc_player.statsMatrixName = matrix_colors(xonstatscoloredname)
                                 irc_player.save()
                                 irc_name = irc_player.statsIRCName
                                 discord_name = irc_player.statsDiscordName
+                                matrix_name = irc_player.statsMatrixName
                             else:
                                 if pl.ircName:
                                     error_result = "Another player is registered with Xonstat account #" + xonstatId
@@ -752,6 +757,7 @@ class DatabaseConnector:
                                     pl.save()
                                     irc_name = pl.statsIRCName
                                     discord_name = pl.statsDiscordName
+                                    matrix_name = pl.statsMatrixName
                     elif chattype == ChatType.DISCORD.value:
                         discord_player: Players = Players.select().where(Players.discordName == user.name).first()
                         pl: Players = Players.select().where(Players.statsId == xonstatId).first()
@@ -761,10 +767,12 @@ class DatabaseConnector:
                                         statsId = xonstatId, 
                                         statsName = xonstatsname, 
                                         statsIRCName = irc_colors(xonstatscoloredname), 
-                                        statsDiscordName = discord_colors(xonstatscoloredname))
+                                        statsDiscordName = discord_colors(xonstatscoloredname),
+                                        statsMatrixName = matrix_colors(xonstatscoloredname))
                             pl.save()
                             irc_name = pl.statsIRCName
-                            discord_name = pl.statsDiscordName                            
+                            discord_name = pl.statsDiscordName
+                            matrix_name = pl.statsMatrixName
                         else:
                             if discord_player == pl:
                                 error_result = "Already registered with Xonstat account #" + xonstatId
@@ -773,9 +781,11 @@ class DatabaseConnector:
                                 discord_player.statsName = xonstatsname
                                 discord_player.statsIRCName = irc_colors(xonstatscoloredname)
                                 discord_player.statsDiscordName = discord_colors(xonstatscoloredname)
+                                discord_player.statsMatrixName = matrix_colors(xonstatscoloredname)
                                 discord_player.save()
                                 irc_name = discord_player.statsIRCName
                                 discord_name = discord_player.statsDiscordName
+                                matrix_name = discord_player.statsMatrixName
                             else:
                                 if pl.discordName:
                                     error_result = "Another player is registered with Xonstat account #" + xonstatId
@@ -789,9 +799,47 @@ class DatabaseConnector:
                                     pl.save()
                                     irc_name = pl.statsIRCName
                                     discord_name = pl.statsDiscordName
+                                    matrix_name = pl.statsMatrixName
                     elif chattype == ChatType.MATRIX.value:
-                        # TODO: Implement Matrix
-                        pass
+                        matrix_player: Players = Players.select().where(Players.matrixName == user.name).first()
+                        pl: Players = Players.select().where(Players.statsId == xonstatId).first()
+                        if pl is None and matrix_player is None:
+                            pl = Players(matrixName = user.name, 
+                                        statsId = xonstatId, 
+                                        statsName = xonstatsname, 
+                                        statsIRCName = irc_colors(xonstatscoloredname), 
+                                        statsDiscordName = discord_colors(xonstatscoloredname),
+                                        statsMatrixName = matrix_colors(xonstatscoloredname))
+                            pl.save()
+                            irc_name = pl.statsIRCName
+                            discord_name = pl.statsDiscordName
+                            matrix_name = pl.statsMatrixName                           
+                        else:
+                            if matrix_player == pl:
+                                error_result = "Already registered with Xonstat account #" + xonstatId
+                            if matrix_player and pl is None:
+                                matrix_player.statsId = xonstatId
+                                matrix_player.statsName = xonstatsname
+                                matrix_player.statsIRCName = irc_colors(xonstatscoloredname)
+                                matrix_player.statsDiscordName = discord_colors(xonstatscoloredname)
+                                matrix_player.statsMatrixName = matrix_colors(xonstatscoloredname)
+                                matrix_player.save()
+                                irc_name = matrix_player.statsIRCName
+                                discord_name = matrix_player.statsDiscordName
+                                matrix_name = matrix_player.statsMatrixName
+                            else:
+                                if pl.matrixName:
+                                    error_result = "Another player is registered with Xonstat account #" + xonstatId
+                                else:
+                                    if matrix_player:
+                                        matrix_player.matrixName = None
+                                        matrix_player.save()
+                                    pl.matrixName = user.name
+                                    pl.matrixName = user.mention
+                                    pl.save()
+                                    irc_name = pl.statsIRCName
+                                    discord_name = pl.statsDiscordName
+                                    matrix_name = pl.statsMatrixName
                     else:
                         db_logger.error("Unknown chattype: %s", chattype)
                         error_result = "Unknown chattype!"
@@ -801,7 +849,7 @@ class DatabaseConnector:
         else:
             error_result = "No ID given!"
         db.close()
-        return error_result, discord_name, irc_name
+        return error_result, discord_name, irc_name, matrix_name
     
     def renew_pickupentry(self, user, gametypes, chattype) -> str:
         db_logger.info("renew_pickupentry: user=%s, gametypes=%s, chattype=%s", user, gametypes, chattype)

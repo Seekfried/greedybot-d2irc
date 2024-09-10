@@ -33,11 +33,12 @@ def dbconnect():
                           (DiscordTestUser("PureDiscord", "@PureDiscord"), "21", "discord", "", False, False),
                           ("Wrong_stat_player", "1", "irc", "Problem with XonStats", True, True),
                           (DiscordTestUser("Wrong_stat_player", "@Wrong_stat_player"), "11", "discord", "Problem with XonStats", True, True)])
-def test_register(dbconnect:DatabaseConnector, user, xonstatid, chat, error_result, discord_empty, irc_empty):
-    errormessage, discordname, ircname = dbconnect.register_player(user=user, xonstatId=xonstatid, chattype=chat)
+def test_register(dbconnect:DatabaseConnector, user, xonstatid, chat, error_result, discord_empty, irc_empty, matrix_empty):
+    errormessage, discordname, ircname, matrixname = dbconnect.register_player(user=user, xonstatId=xonstatid, chattype=chat)
     assert error_result == errormessage
     assert discord_empty == (len(discordname) == 0)
     assert irc_empty == (len(ircname) == 0)
+    assert matrix_empty == (len(matrixname) == 0)
 
 @pytest.mark.parametrize("player_name, chat, result_empty", [("Seek-y", "irc", False),
                                                ("Seek-y", "discord", False),
