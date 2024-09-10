@@ -1,6 +1,4 @@
-from unittest import result
 from chattype import ChatType
-from bracket.bracketcreator import get_cuppicture
 import threading
 import random
 from datetime import datetime
@@ -561,15 +559,6 @@ class Greedybot:
             pass
         else:
             logger.error("Unknown chattype: ", chattype)
-
-    def command_cupstart(self, user, argument, chattype, isadmin):
-        #creates cup brackets and uploads to discord
-        #example: !cupstart seeky-cup Seek-y Grunt hotdog packer
-        logger.info("command_cupstart: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
- 
-        cuppath = get_cuppicture(argument, self.settings["bot"]["browser"])
-        self.discordconnect.send_my_file(cuppath)
-        self.send_all("Generate Cup...")
 
     def command_online(self, user, argument, chattype, isadmin):
         #List all current online discord-members for irc-users and vice versa
