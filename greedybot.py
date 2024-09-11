@@ -243,12 +243,16 @@ class Greedybot:
         if error_message == "":
             if chattype == ChatType.IRC.value:
                 self.send_all(self.cmdresults["misc"]["registsuccess"].format(user, xonstatsId, discord_name), 
-                              self.cmdresults["misc"]["registsuccess"].format(user, xonstatsId, irc_name))
+                              self.cmdresults["misc"]["registsuccess"].format(user, xonstatsId, irc_name),
+                              self.cmdresults["misc"]["registsuccess"].format(user, xonstatsId, matrix_name))
             elif chattype == ChatType.DISCORD.value:
                 self.send_all(self.cmdresults["misc"]["registsuccess"].format(user.name, xonstatsId, discord_name), 
-                              self.cmdresults["misc"]["registsuccess"].format(user.name, xonstatsId, irc_name))
+                              self.cmdresults["misc"]["registsuccess"].format(user.name, xonstatsId, irc_name),
+                              self.cmdresults["misc"]["registsuccess"].format(user.name, xonstatsId, matrix_name))
             elif chattype == ChatType.MATRIX.value:
-                # TODO: Implement Matrix connection
+                self.send_all(self.cmdresults["misc"]["registsuccess"].format(user, xonstatsId, discord_name), 
+                              self.cmdresults["misc"]["registsuccess"].format(user, xonstatsId, irc_name),
+                              self.cmdresults["misc"]["registsuccess"].format(user, xonstatsId, matrix_name))
                 pass
             else:
                 logger.error("Unknown chattype: ", chattype)

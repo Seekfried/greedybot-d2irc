@@ -3,6 +3,7 @@ import time
 from chattype import ChatType
 from nio import AsyncClient, MatrixRoom, RoomMessageText, LoginResponse
 from utils import create_logger
+import re
 
 logger = create_logger(__name__)
 
@@ -48,15 +49,37 @@ class MatrixConnector:
             
             # Compare the event timestamp with the start time
             if event_timestamp > self.start_time:
+                # TODO: Implement muted users feature in matrix
                 # Process the new message
                 logger.info(f"New message in {room.display_name} : {event.body}")
-                self.bot.send_all(message=event.body, chattype=ChatType.MATRIX.value, messagehead="<"+ event.sender + "> ", discordmention=True)
+                await self.__process_message(room, event)
     
-    async def send_my_message_async(self,message):
+    async def __process_message(self, room: MatrixRoom, event: RoomMessageText) -> None:
+        logger.info(f"Process message. room: {room.display_name} message: <{event.sender}> {event.body}")
+
+        # TODO: Implement muted users feature in matrix
+        should_bridge = True
+        if should_bridge:
+            logger.info(f"New message in {room.display_name} : {event.body}")
+            self.bot.send_all(message=event.body, chattype=ChatType.MATRIX.value, messagehead="<"+ event.sender + "> ", discordmention=True)
+            
+        # criteria for admin: if the user can kick in the room
+        isAdmin = room.power_levels.can_user_kick(event.sender)
+        if event.body.startswith("!"):
+            self.bot.send_command(event.sender, event.body, ChatType.MATRIX.value, isAdmin)
+
+    
+    # async def send_my_message_async(self,message):
+    #     await self.client.room_send(
+    #         room_id=self.room,
+    #         message_type="m.room.message",
+    #         content={"msgtype": "m.text", "body": message})
+        
+    async def send_my_message_async(self, message):
         await self.client.room_send(
             room_id=self.room,
             message_type="m.room.message",
-            content={"msgtype": "m.text", "body": message})
+            content={"msgtype": "m.text", "body": re.sub('<[^<]+?>', '', message), "format": "html", "formatted_body": message})
     
     def send_my_message(self,message):
         asyncio.run_coroutine_threadsafe(self.send_my_message_async(message), self.loop)

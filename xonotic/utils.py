@@ -121,7 +121,7 @@ def irc_colors(qstr: str) -> str:
     return result
 
 def matrix_colors(qstr: str) -> str:
-    _matrix_colors = { "#000",
+    _matrix_colors = [ "#000",
                        "#f00",
                        "#0f0",
                        "#ff0",
@@ -131,7 +131,8 @@ def matrix_colors(qstr: str) -> str:
                        "#fff",
                        "#000",
                        "#888" 
-                    }
+                     ]
+    
     _all_colors = re.compile(r'(\^\d|\^x[\dA-Fa-f]{3})')
     #qstr = ''.join([ x if ord(x) < 128 else '' for x in qstr ]).replace('^^', '^').replace(u'\x00', '') # strip weird characters
     parts = _all_colors.split(qstr)
@@ -155,12 +156,12 @@ def matrix_colors(qstr: str) -> str:
         color = 0
         if tag:
             if len(tag) == 4 and tag[0] == 'x':
-                color = "<font color=\"" + tag[1:] + "\">"
+                color = "<font color=\"#" + tag[1:] + "\">"
             elif len(tag) == 1 and int(tag[0]) in range(0,9):
                 color = "<font color=\"" + _matrix_colors[int(tag[0])] + "\">"
         if color != oldcolor:
-            result += color + "</font>"
-        result += txt
+            result += color 
+        result += txt + "</font>"
         oldcolor = color
     return result
 
@@ -241,7 +242,7 @@ def get_serverinfo(serverip:str) -> list[str]:
             serverinfos.append("Player: " + server_item[0].contents[9].text)
         return result, serverinfos
     except:
-        print("Server not online")
+        utils_logger.error("Server not online")
         return result, serverinfos
  
 def get_quote(playername:str = None) -> list[str]:
