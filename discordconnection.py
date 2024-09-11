@@ -119,16 +119,14 @@ async def on_message(message):
     global channel
     global bot
     
-    should_bridge = True
+    should_bridge = True    
+
+    # Don't reply to itself
+    if message.author == client.user:
+        return
         
     if message.author.name in bot.muted_discord_users:
         should_bridge = False
-
-    # Don't reply to itself, except cup pictures
-    if message.author == client.user:
-        if len(message.attachments) > 0:
-            bot.send_all(message="Cup: " + message.attachments[0].url, chattype=ChatType.DISCORD.value)
-        return
     
     if message.channel != channel:
         return

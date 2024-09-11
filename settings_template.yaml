@@ -3,8 +3,6 @@ bot:
   pugtimewarning: 2400 
   # Delete player from pickup after x seconds
   pugtimeout: 3600
-  # Used webrowser to create cup pictures possible options: chrome, chromium or edge
-  browser: "chrome"
 
 database:
   # Name of created SQLite file

@@ -42,7 +42,7 @@ class MatrixConnector:
         if event.sender == self.botname:
             return
         # Check if the event is a message (e.g., text message)
-        if isinstance(event, RoomMessageText):
+        if isinstance(event, RoomMessageText) and room.room_id == self.room:
             # Get the timestamp of the event
             event_timestamp = event.server_timestamp / 1000
             
