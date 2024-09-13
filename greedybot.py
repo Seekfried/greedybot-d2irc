@@ -82,9 +82,9 @@ class Greedybot:
                 #player gets notified: "Your added games will expire in 20 minutes, type !renew to renew your games"
                 if warn_user:
                     if warn_user["chattype"] == ChatType.IRC.value:
-                        self.send_notice(warn_user["user"], self.cmdresults["misc"]["pugtimewarn"], warn_user["chattype"])
+                        self.send_notice(warn_user["user"], warn_user["user"] + " " + self.cmdresults["misc"]["pugtimewarn"], warn_user["chattype"])
                     elif warn_user["chattype"] == ChatType.DISCORD.value:
-                        self.send_notice(None, warn_user["user"] +  " " + self.cmdresults["misc"]["pugtimewarn"], warn_user["chattype"])
+                        self.send_notice(None, warn_user["user"] + " " + self.cmdresults["misc"]["pugtimewarn"], warn_user["chattype"])
                     elif warn_user["chattype"] == ChatType.MATRIX.value:
                         # TODO: Implement Matrix connection
                         pass

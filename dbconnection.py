@@ -695,7 +695,14 @@ class DatabaseConnector:
                 if not pugentry.isWarned:
                     pugentry.isWarned = True
                     pugentry.save()
-                    warn_user = {"user": pugentry.playerId.ircName, "chattype": pugentry.addedFrom}
+                    if pugentry.addedFrom == ChatType.IRC.value:
+                        warn_user = {"user": pugentry.playerId.ircName, "chattype": pugentry.addedFrom}
+                    elif pugentry.addedFrom == ChatType.DISCORD.value:
+                        warn_user = {"user": pugentry.playerId.discordMention, "chattype": pugentry.addedFrom}
+                    elif pugentry.addedFrom == ChatType.MATRIX.value:
+                        warn_user = {"user": pugentry.playerId.matrixName, "chattype": pugentry.addedFrom}
+                    else:
+                        db_logger.error("Unknown chattype: ", pugentry.addedFrom)
             else:
                 if mindiff > warntime - pugdiff:
                     mindiff = warntime - pugdiff
