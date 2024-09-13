@@ -147,9 +147,9 @@ async def on_message(message):
 
     if message.content.startswith('!'):
         if settings["modrole"] in [y.name.lower() for y in message.author.roles]:
-            bot.send_command(message.author, message.content, "discord", True)
+            bot.send_command(message.author, message.content, ChatType.DISCORD.value, True)
         else:
-            bot.send_command(message.author, message.content, "discord", False)
+            bot.send_command(message.author, message.content, ChatType.DISCORD.value, False)
 
 @client.event
 async def on_presence_update(before, after):

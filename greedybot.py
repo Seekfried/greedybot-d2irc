@@ -135,7 +135,7 @@ class Greedybot:
         else:
             logger.error("Unknown chattype: ", chattype)
 
-    def send_all(self, message:str, ircmessage:str = None, matrixmessage:str = None, chattype:str = None, messagehead:str = None, discordmention:bool = False):
+    def send_all(self, message:str, ircmessage:str = None, matrixmessage:str = None, chattype:str = None, messagehead:str = None, discordmention:bool = False, matrix_html: bool = False):
         logger.info("send_all: message=%s, ircmessage=%s, matrixmessage=%s, chattype=%s, messagehead=%s, discordmention=%s", 
                     message, ircmessage, matrixmessage, chattype, messagehead, discordmention)
         
@@ -148,9 +148,9 @@ class Greedybot:
                     
             if self.matrix_enabled and chattype != ChatType.MATRIX.value:
                 if matrixmessage is not None:
-                    self.matrixconnect.send_my_message(messagehead + matrixmessage)
+                    self.matrixconnect.send_my_message(messagehead + matrixmessage, matrix_html)
                 else:
-                    self.matrixconnect.send_my_message(messagehead + message)
+                    self.matrixconnect.send_my_message(messagehead + message, matrix_html)
             
             if self.discord_enabled and chattype != ChatType.DISCORD.value:
                 if discordmention:
@@ -166,9 +166,9 @@ class Greedybot:
                     
             if self.matrix_enabled and chattype != ChatType.MATRIX.value:
                 if matrixmessage is not None:
-                    self.matrixconnect.send_my_message(matrixmessage)
+                    self.matrixconnect.send_my_message(matrixmessage, matrix_html)
                 else:
-                    self.matrixconnect.send_my_message(message)
+                    self.matrixconnect.send_my_message(message, matrix_html)
             
             if self.discord_enabled and chattype != ChatType.DISCORD.value:
                 if discordmention:
@@ -238,17 +238,24 @@ class Greedybot:
         error_message: str = ""
         discord_name: str = ""
         irc_name: str = ""
-        error_message, discord_name, irc_name = self.dbconnect.register_player(user, xonstatsId, chattype)
+        error_message, discord_name, irc_name, matrix_name = self.dbconnect.register_player(user, xonstatsId, chattype)
 
         if error_message == "":
             if chattype == ChatType.IRC.value:
                 self.send_all(self.cmdresults["misc"]["registsuccess"].format(user, xonstatsId, discord_name), 
-                              self.cmdresults["misc"]["registsuccess"].format(user, xonstatsId, irc_name))
+                              self.cmdresults["misc"]["registsuccess"].format(user, xonstatsId, irc_name),
+                              self.cmdresults["misc"]["registsuccess"].format(user, xonstatsId, matrix_name),
+                              matrix_html=True)
             elif chattype == ChatType.DISCORD.value:
                 self.send_all(self.cmdresults["misc"]["registsuccess"].format(user.name, xonstatsId, discord_name), 
-                              self.cmdresults["misc"]["registsuccess"].format(user.name, xonstatsId, irc_name))
+                              self.cmdresults["misc"]["registsuccess"].format(user.name, xonstatsId, irc_name),
+                              self.cmdresults["misc"]["registsuccess"].format(user.name, xonstatsId, matrix_name),
+                              matrix_html=True)
             elif chattype == ChatType.MATRIX.value:
-                # TODO: Implement Matrix connection
+                self.send_all(self.cmdresults["misc"]["registsuccess"].format(user, xonstatsId, discord_name), 
+                              self.cmdresults["misc"]["registsuccess"].format(user, xonstatsId, irc_name),
+                              self.cmdresults["misc"]["registsuccess"].format(user, xonstatsId, matrix_name),
+                              matrix_html=True)
                 pass
             else:
                 logger.error("Unknown chattype: ", chattype)
