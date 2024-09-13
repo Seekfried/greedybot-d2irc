@@ -17,18 +17,27 @@ class MatrixConnector:
         self.password = settings["password"]        
         self.room = settings["room"]
 
+
     def __replace_tags(self, text):
-        # First, escape < and > in all instances except <font ...> and </font>
-        # Step 1: Use regex to find and temporarily mark <font ...> and </font>
-        text = re.sub(r'(<font[^>]*>|</font>)', lambda m: m.group(0).replace('<', '<<').replace('>', '>>'), text)
-
-        # Step 2: Replace < and > with &lt; and &gt; everywhere else
-        text = re.sub(r'<(?!<font[^>]*>|</font>)', '&lt;', text)
-        text = re.sub(r'>(?!<</font>)', '&gt;', text)
+        # Step 1: Use regex to find all font tags and temporarily replace them with placeholders
+        placeholders = []
+        def replace_font_tag(match):
+            placeholders.append(match.group(0))
+            return f'__FONT_TAG_{len(placeholders) - 1}__'
         
-        # Step 3: Restore the original < and > in <font ...> and </font> tags
-        text = text.replace('<&lt;', '<').replace('&gt;>', '>')
-
+        text = re.sub(r'<font[^>]*>.*?</font>', replace_font_tag, text, flags=re.DOTALL)
+        
+        # Step 2: Escape all remaining < and > with &lt; and &gt;
+        text = re.sub(r'<', '&lt;', text)
+        text = re.sub(r'>', '&gt;', text)
+        
+        # Step 3: Restore the font tags from placeholders
+        def restore_font_tag(match):
+            index = int(match.group(1))
+            return placeholders[index]
+        
+        text = re.sub(r'__FONT_TAG_(\d+)__', restore_font_tag, text)
+        
         return text
 
     async def start(self) -> None:
@@ -82,20 +91,19 @@ class MatrixConnector:
         if event.body.startswith("!"):
             self.bot.send_command(event.sender, event.body, ChatType.MATRIX.value, isAdmin)
 
-    
-    # async def send_my_message_async(self,message):
-    #     await self.client.room_send(
-    #         room_id=self.room,
-    #         message_type="m.room.message",
-    #         content={"msgtype": "m.text", "body": message})
-        
-    async def send_my_message_async(self, message):
-        formatted_message = self.__replace_tags(message)
-        await self.client.room_send(
-            room_id=self.room,
-            message_type="m.room.message",
-            content={"msgtype": "m.text", "body": formatted_message, "format": "org.matrix.custom.html", "formatted_body": formatted_message})
-    
-    def send_my_message(self, message):
-        asyncio.run_coroutine_threadsafe(self.send_my_message_async(message), self.loop)
+    async def send_my_message_async(self,message, html):
+        if html:
+            formatted_message = self.__replace_tags(message)
+            await self.client.room_send(
+                room_id=self.room,
+                message_type="m.room.message",
+                content={"msgtype": "m.text", "body": formatted_message, "format": "org.matrix.custom.html", "formatted_body": formatted_message})
+        else:
+            await self.client.room_send(
+                room_id=self.room,
+                message_type="m.room.message",
+                content={"msgtype": "m.text", "body": message})
+
+    def send_my_message(self, message, html=False):
+        asyncio.run_coroutine_threadsafe(self.send_my_message_async(message, html), self.loop)
 

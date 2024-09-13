@@ -803,7 +803,7 @@ class DatabaseConnector:
                         matrix_player: Players = Players.select().where(Players.matrixName == user).first()
                         pl: Players = Players.select().where(Players.statsId == xonstatId).first()
                         if pl is None and matrix_player is None:
-                            pl = Players(matrixName = user.name, 
+                            pl = Players(matrixName = user, 
                                         statsId = xonstatId, 
                                         statsName = xonstatsname, 
                                         statsIRCName = irc_name, 

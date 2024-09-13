@@ -135,7 +135,7 @@ class Greedybot:
         else:
             logger.error("Unknown chattype: ", chattype)
 
-    def send_all(self, message:str, ircmessage:str = None, matrixmessage:str = None, chattype:str = None, messagehead:str = None, discordmention:bool = False):
+    def send_all(self, message:str, ircmessage:str = None, matrixmessage:str = None, chattype:str = None, messagehead:str = None, discordmention:bool = False, matrix_html: bool = False):
         logger.info("send_all: message=%s, ircmessage=%s, matrixmessage=%s, chattype=%s, messagehead=%s, discordmention=%s", 
                     message, ircmessage, matrixmessage, chattype, messagehead, discordmention)
         
@@ -148,9 +148,9 @@ class Greedybot:
                     
             if self.matrix_enabled and chattype != ChatType.MATRIX.value:
                 if matrixmessage is not None:
-                    self.matrixconnect.send_my_message(messagehead + matrixmessage)
+                    self.matrixconnect.send_my_message(messagehead + matrixmessage, matrix_html)
                 else:
-                    self.matrixconnect.send_my_message(messagehead + message)
+                    self.matrixconnect.send_my_message(messagehead + message, matrix_html)
             
             if self.discord_enabled and chattype != ChatType.DISCORD.value:
                 if discordmention:
@@ -166,9 +166,9 @@ class Greedybot:
                     
             if self.matrix_enabled and chattype != ChatType.MATRIX.value:
                 if matrixmessage is not None:
-                    self.matrixconnect.send_my_message(matrixmessage)
+                    self.matrixconnect.send_my_message(matrixmessage, matrix_html)
                 else:
-                    self.matrixconnect.send_my_message(message)
+                    self.matrixconnect.send_my_message(message, matrix_html)
             
             if self.discord_enabled and chattype != ChatType.DISCORD.value:
                 if discordmention:

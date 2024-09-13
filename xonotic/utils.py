@@ -153,15 +153,15 @@ def matrix_colors(qstr: str) -> str:
             # only colorcode and no real text, skip this
             continue
 
-        color = 0
+        color = ""
         if tag:
             if len(tag) == 4 and tag[0] == 'x':
                 color = "<font color=\"#" + tag[1:] + "\">"
             elif len(tag) == 1 and int(tag[0]) in range(0,9):
-                color = "<font color=\"" + _matrix_colors[int(tag[0])] + "\">"
+                color = "<font color=\"" + _matrix_colors[int(tag[0])] + "\">"                
         if color != oldcolor:
             result += color 
-        result += txt + "</font>"
+        result += txt + "</font>" if len(color) > 0 else txt
         oldcolor = color
     return result
 
