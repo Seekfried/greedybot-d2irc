@@ -72,8 +72,6 @@ class MatrixConnector:
             
             # Compare the event timestamp with the start time
             if event_timestamp > self.start_time:
-                # TODO: Implement muted users feature in matrix
-                # Process the new message
                 logger.info(f"New message in {room.display_name} : {event.body}")
                 await self.__process_message(room, event)
     
@@ -82,6 +80,10 @@ class MatrixConnector:
 
         # TODO: Implement muted users feature in matrix
         should_bridge = True
+
+        if event.sender in self.bot.muted_matrix_users:
+            should_bridge = False
+
         if should_bridge:
             logger.info(f"New message in {room.display_name} : {event.body}")
             self.bot.send_all(message=event.body, chattype=ChatType.MATRIX.value, messagehead="<"+ event.sender + "> ", discordmention=True)

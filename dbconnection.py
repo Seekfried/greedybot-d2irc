@@ -81,8 +81,7 @@ class DatabaseConnector:
         elif chattype == ChatType.DISCORD.value:
             player = Players.select().where(Players.discordName == user).first()
         elif chattype == ChatType.MATRIX.value:
-            # TODO: Implement matrix connection
-            pass
+            player = Players.select().where(Players.matrixName == user).first()
         else:
             db_logger.error("Unknown chattype: %s", chattype)
         return player
@@ -660,7 +659,7 @@ class DatabaseConnector:
             if player.matrixName:
                 muted_matrix_users.append(player.matrixName)
         db.close()
-        return muted_discord_users, muted_irc_users
+        return muted_discord_users, muted_irc_users, muted_matrix_users
     
     def has_active_games(self) -> bool:
         result: bool = False

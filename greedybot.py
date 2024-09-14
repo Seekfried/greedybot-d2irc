@@ -568,12 +568,12 @@ class Greedybot:
                 self.send_notice(user, "Your messages are now not bridged to irc and matrix", chattype)
         elif chattype == ChatType.MATRIX.value:
             if user in self.muted_matrix_users:
-                self.muted_discord_users.remove(user.name)
+                self.muted_discord_users.remove(discord_name)
                 self.muted_irc_users.remove(irc_name)
                 self.muted_matrix_users.remove(user)
                 self.send_notice(user, "Your messages are now bridged to irc and discord", chattype)
             else:
-                self.muted_discord_users.append(user.name)
+                self.muted_discord_users.append(discord_name)
                 self.muted_irc_users.append(irc_name)
                 self.muted_matrix_users.append(user)
                 self.send_notice(user, "Your messages are now not bridged to irc and discord", chattype)
@@ -585,12 +585,12 @@ class Greedybot:
         logger.info("command_online: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
 
         if chattype == ChatType.IRC.value:
-            self.ircconnect.send_my_message("Online are: " + ", ".join(self.discordconnect.get_online_members()))
+            self.ircconnect.send_my_message("On Discord are online: " + ", ".join(self.discordconnect.get_online_members()))
         elif chattype == ChatType.DISCORD.value:
-            self.discordconnect.send_my_message("Online are: " + ", ".join(self.ircconnect.get_online_users()))
+            self.discordconnect.send_my_message("On IRC are online: " + ", ".join(self.ircconnect.get_online_users()))
         elif chattype == ChatType.MATRIX.value:
-            # TODO: Implement Matrix connection
-            pass
+            self.matrixconnect.send_my_message("On Discord are online: " + ", ".join(self.discordconnect.get_online_members()))
+            self.matrixconnect.send_my_message("On IRC are online: " + ", ".join(self.ircconnect.get_online_users()))
         else:
             logger.error("Unknown chattype: ", chattype)
 

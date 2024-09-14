@@ -33,7 +33,7 @@ def dbconnect():
                           (DiscordTestUser("Grunt", "@Grunt"), "22", ChatType.DISCORD.value, "", False, False, False),
                           ("PureIrc", "130", ChatType.IRC.value, "", False, False, False),                          
                           (DiscordTestUser("PureDiscord", "@PureDiscord"), "21", ChatType.DISCORD.value, "", False, False, False),
-                          ("PureMatrix", "21", ChatType.MATRIX.value, "", False, False, False),
+                          ("PureMatrix", "29921", ChatType.MATRIX.value, "", False, False, False),
                           ("Wrong_stat_player", "1", ChatType.IRC.value, "Problem with XonStats", True, True, True),
                           (DiscordTestUser("Wrong_stat_player", "@Wrong_stat_player"), "11", ChatType.DISCORD.value, "Problem with XonStats", True, True, True),
                           ("Wrong_stat_player", "1", ChatType.MATRIX.value, "Problem with XonStats", True, True, True)])
@@ -54,9 +54,9 @@ def test_get_full_stats(dbconnect:DatabaseConnector, player_name, chat, result_e
 ####### Bridge Tests ######
 
 @pytest.mark.parametrize("user, chat, result_irc, result_discord, result_matrix",
-                         [("Seek-y", ChatType.IRC.value, "Seek-y", "seek_y", "Seek-y"),
-                          (DiscordTestUser("Grunt", "@Grunt"), ChatType.DISCORD.value, "Grunt", "Grunt", "Grunt"),
-                          ("PureIrc", ChatType.IRC.value, "PureIrc", None),
+                         [("Seek-y", ChatType.IRC.value, "Seek-y", "seek_y", "seek-y"),
+                          (DiscordTestUser("Grunt", "@Grunt"), ChatType.DISCORD.value, "Grunt", "Grunt", None),
+                          ("PureIrc", ChatType.IRC.value, "PureIrc", None, None),
                           (DiscordTestUser("PureDiscord", "@PureDiscord"), ChatType.DISCORD.value, None, "PureDiscord", None),
                           ("PureMatrix", ChatType.MATRIX.value, None, None, "PureMatrix"),
                           ("Wrong_player", ChatType.IRC.value, "", "", "")])
@@ -66,7 +66,7 @@ def test_toggle_player_bridge(dbconnect:DatabaseConnector, user, chat, result_ir
     assert discord_name == result_discord
     assert matrix_name == result_matrix
 
-@pytest.mark.parametrize("result_discord, result_irc, result_matrix", [(["seek_y", "Grunt", "PureDiscord"], ["Seek-y", "Grunt", "PureIrc"], ["Seek-y", "Grunt", "PureMatrix"])])
+@pytest.mark.parametrize("result_discord, result_irc, result_matrix", [(["seek_y", "Grunt", "PureDiscord"], ["Seek-y", "Grunt", "PureIrc"], ["seek-y", "PureMatrix"])])
 def test_get_unbridged_players(dbconnect:DatabaseConnector, result_discord, result_irc, result_matrix):
     discord_users, irc_users, matrix_users = dbconnect.get_unbridged_players()
     assert irc_users == result_irc
