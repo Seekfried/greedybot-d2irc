@@ -53,23 +53,25 @@ def test_get_full_stats(dbconnect:DatabaseConnector, player_name, chat, result_e
 
 ####### Bridge Tests ######
 
-@pytest.mark.parametrize("user, chat, result_irc, result_discord",
-                         [("Seek-y", ChatType.IRC.value, "Seek-y", "seek_y"),
-                          (DiscordTestUser("Grunt", "@Grunt"), ChatType.DISCORD.value, "Grunt", "Grunt"),
+@pytest.mark.parametrize("user, chat, result_irc, result_discord, result_matrix",
+                         [("Seek-y", ChatType.IRC.value, "Seek-y", "seek_y", "Seek-y"),
+                          (DiscordTestUser("Grunt", "@Grunt"), ChatType.DISCORD.value, "Grunt", "Grunt", "Grunt"),
                           ("PureIrc", ChatType.IRC.value, "PureIrc", None),
-                          (DiscordTestUser("PureDiscord", "@PureDiscord"), ChatType.DISCORD.value, None, "PureDiscord"),
-                          #("PureMatrix", ChatType.MATRIX.value, None, None, "PureMatrix"),
-                          ("Wrong_player", ChatType.IRC.value, "", "")])
-def test_toggle_player_bridge(dbconnect:DatabaseConnector, user, chat, result_irc, result_discord):
-    irc_name, discord_name = dbconnect.toggle_player_bridge(user, chat)
+                          (DiscordTestUser("PureDiscord", "@PureDiscord"), ChatType.DISCORD.value, None, "PureDiscord", None),
+                          ("PureMatrix", ChatType.MATRIX.value, None, None, "PureMatrix"),
+                          ("Wrong_player", ChatType.IRC.value, "", "", "")])
+def test_toggle_player_bridge(dbconnect:DatabaseConnector, user, chat, result_irc, result_discord, result_matrix):
+    irc_name, discord_name, matrix_name = dbconnect.toggle_player_bridge(user, chat)
     assert irc_name == result_irc
     assert discord_name == result_discord
+    assert matrix_name == result_matrix
 
-@pytest.mark.parametrize("result_discord, result_irc", [(["seek_y", "Grunt", "PureDiscord"], ["Seek-y", "Grunt", "PureIrc"])])
-def test_get_unbridged_players(dbconnect:DatabaseConnector, result_discord, result_irc):
-    discord_users, irc_users = dbconnect.get_unbridged_players()
+@pytest.mark.parametrize("result_discord, result_irc, result_matrix", [(["seek_y", "Grunt", "PureDiscord"], ["Seek-y", "Grunt", "PureIrc"], ["Seek-y", "Grunt", "PureMatrix"])])
+def test_get_unbridged_players(dbconnect:DatabaseConnector, result_discord, result_irc, result_matrix):
+    discord_users, irc_users, matrix_users = dbconnect.get_unbridged_players()
     assert irc_users == result_irc
     assert discord_users == result_discord
+    assert matrix_users == result_matrix
 
 ####### Pickup Tests #######
 

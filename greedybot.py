@@ -26,7 +26,8 @@ class Greedybot:
         self.dbconnect = DatabaseConnector(self.settings["database"]["filename"])        
         self.muted_discord_users = []
         self.muted_irc_users = []
-        self.muted_discord_users, self.muted_irc_users = self.dbconnect.get_unbridged_players()
+        self.muted_matrix_users = []
+        self.muted_discord_users, self.muted_irc_users, self.muted_matrix_users = self.dbconnect.get_unbridged_players()
 
     async def run(self):
         self.irc_enabled: bool = self.settings[ChatType.IRC.value] is not None
@@ -86,7 +87,7 @@ class Greedybot:
                     elif warn_user["chattype"] == ChatType.DISCORD.value:
                         self.send_notice(None, warn_user["user"] + " " + self.cmdresults["misc"]["pugtimewarn"], warn_user["chattype"])
                     elif warn_user["chattype"] == ChatType.MATRIX.value:
-                        # TODO: Implement Matrix connection
+                        self.send_notice(None, warn_user["user"] + " " + self.cmdresults["misc"]["pugtimewarn"], warn_user["chattype"])
                         pass
                     else:
                         logger.error("Unknown chattype: ", warn_user["chattype"])
@@ -130,8 +131,7 @@ class Greedybot:
         elif chattype == ChatType.DISCORD.value:
             self.discordconnect.send_my_message(message)
         elif chattype == ChatType.MATRIX.value:
-            # TODO: Implement Matrix connection
-            pass
+            self.matrixconnect.send_my_message(message)
         else:
             logger.error("Unknown chattype: ", chattype)
 
@@ -541,29 +541,42 @@ class Greedybot:
         logger.info("command_bridge: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
         irc_name: str = ""
         discord_name: str = ""
-        irc_name, discord_name = self.dbconnect.toggle_player_bridge(user, chattype)
+        matrix_name: str = ""
+        irc_name, discord_name, matrix_name = self.dbconnect.toggle_player_bridge(user, chattype)
 
         if chattype == ChatType.IRC.value:
             if user in self.muted_irc_users:
                 self.muted_irc_users.remove(user)
                 self.muted_discord_users.remove(discord_name)
-                self.send_notice(user, "Your Message are now bridged to discord.", chattype)
+                self.muted_matrix_users.remove(matrix_name)
+                self.send_notice(user, "Your messages are now bridged to discord and matrix.", chattype)
             else:
                 self.muted_irc_users.append(user)
                 self.muted_discord_users.append(discord_name)
-                self.send_notice(user, "Your Message are now not bridged to discord.", chattype)
+                self.muted_matrix_users.append(matrix_name)
+                self.send_notice(user, "Your messages are now not bridged to discord and matrix.", chattype)
         elif chattype == ChatType.DISCORD.value:
             if user.name in self.muted_discord_users:
                 self.muted_discord_users.remove(user.name)
                 self.muted_irc_users.remove(irc_name)
-                self.send_notice(user, "Your Message are now bridged to irc.", chattype)
+                self.muted_matrix_users.remove(matrix_name)
+                self.send_notice(user, "Your messages are now bridged to irc and matrix", chattype)
             else:
                 self.muted_discord_users.append(user.name)
                 self.muted_irc_users.append(irc_name)
-                self.send_notice(user, "Your Message are now not bridged to irc.", chattype)
+                self.muted_matrix_users.append(matrix_name)
+                self.send_notice(user, "Your messages are now not bridged to irc and matrix", chattype)
         elif chattype == ChatType.MATRIX.value:
-            # TODO: Implement Matrix connection
-            pass
+            if user in self.muted_matrix_users:
+                self.muted_discord_users.remove(user.name)
+                self.muted_irc_users.remove(irc_name)
+                self.muted_matrix_users.remove(user)
+                self.send_notice(user, "Your messages are now bridged to irc and discord", chattype)
+            else:
+                self.muted_discord_users.append(user.name)
+                self.muted_irc_users.append(irc_name)
+                self.muted_matrix_users.append(user)
+                self.send_notice(user, "Your messages are now not bridged to irc and discord", chattype)
         else:
             logger.error("Unknown chattype: ", chattype)
 
