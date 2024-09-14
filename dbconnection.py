@@ -81,8 +81,7 @@ class DatabaseConnector:
         elif chattype == ChatType.DISCORD.value:
             player = Players.select().where(Players.discordName == user).first()
         elif chattype == ChatType.MATRIX.value:
-            # TODO: Implement matrix connection
-            pass
+            player = Players.select().where(Players.matrixName == user).first()
         else:
             db_logger.error("Unknown chattype: %s", chattype)
         return player
@@ -640,10 +639,11 @@ class DatabaseConnector:
             message = "Wrong gametype!"
         return message
     
-    def get_unbridged_players(self) -> tuple[list[str], list[str]]:
+    def get_unbridged_players(self) -> tuple[list[str], list[str], list[str]]:
         db_logger.info("get_unbridged_players")
         muted_discord_users = []
         muted_irc_users = []
+        muted_matrix_users = []
 
         db.connect()
         if not Players.table_exists():
@@ -656,8 +656,10 @@ class DatabaseConnector:
                 muted_discord_users.append(player.discordName)
             if player.ircName:
                 muted_irc_users.append(player.ircName)
+            if player.matrixName:
+                muted_matrix_users.append(player.matrixName)
         db.close()
-        return muted_discord_users, muted_irc_users
+        return muted_discord_users, muted_irc_users, muted_matrix_users
     
     def has_active_games(self) -> bool:
         result: bool = False
@@ -936,19 +938,21 @@ class DatabaseConnector:
             self.delete_games_without_player()
         return result
     
-    def toggle_player_bridge(self, user, chattype) -> tuple[str, str]:
+    def toggle_player_bridge(self, user, chattype) -> tuple[str, str, str]:
         #toggles if a player should be bridged to discord/irc        
         db_logger.info("toggle_player_bridge: user=%s, chattype=%s", user, chattype)
         irc_name: str = ""
         discord_name: str = ""
+        matrix_name: str = ""
 
         db.connect
         player: Players = self.__get_player(user, chattype)
         if player:
             irc_name = player.ircName
             discord_name = player.discordName
+            matrix_name = player.matrixName
             player.shouldBridge = not player.shouldBridge
             player.save()
         db.close()
-        return irc_name, discord_name
+        return irc_name, discord_name, matrix_name
             
