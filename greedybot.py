@@ -123,7 +123,7 @@ class Greedybot:
             self.send_notice(user, "Sorry, something went wrong", chattype)
             logger.error("Error in command:", e)
 
-    def send_notice(self, user, message, chattype):
+    def send_notice(self, user, message, chattype, matrix_html = False):
         #sends message to only discord or to specific irc-user (for future: send direct message to discord-user)
         logger.info("send_notice: user=%s, message=%s, chattype=%s", user, message, chattype)
         if chattype == ChatType.IRC.value:
@@ -131,7 +131,7 @@ class Greedybot:
         elif chattype == ChatType.DISCORD.value:
             self.discordconnect.send_my_message(message)
         elif chattype == ChatType.MATRIX.value:
-            self.matrixconnect.send_my_message(message)
+            self.matrixconnect.send_my_message(message, matrix_html)
         else:
             logger.error("Unknown chattype: ", chattype)
 
@@ -705,7 +705,7 @@ class Greedybot:
                     
                 else:
                     response += " | No games found"
-                self.send_notice(user, response, chattype)
+                self.send_notice(user, response, chattype, chattype==ChatType.MATRIX.value)
             else:
                 self.send_notice(user, "No player found!", chattype)
         else:
