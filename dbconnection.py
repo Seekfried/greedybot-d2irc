@@ -474,8 +474,7 @@ class DatabaseConnector:
                 elif chattype == ChatType.DISCORD.value:
                     stats["player"]["colored_name"] = discord_colors(stats["player"]["nick"])
                 elif chattype == ChatType.MATRIX.value:
-                    # TODO: Implement matrix connection
-                    pass
+                    stats["player"]["colored_name"] = matrix_colors(stats["player"]["nick"])
                 else:
                     stats["player"]["colored_name"] = stats["player"]["stripped_nick"]
             

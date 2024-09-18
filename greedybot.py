@@ -131,7 +131,7 @@ class Greedybot:
         elif chattype == ChatType.DISCORD.value:
             self.discordconnect.send_my_message(message)
         elif chattype == ChatType.MATRIX.value:
-            self.matrixconnect.send_my_message(message)
+            self.matrixconnect.send_my_message(message, True)
         else:
             logger.error("Unknown chattype: ", chattype)
 
