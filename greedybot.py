@@ -276,10 +276,9 @@ class Greedybot:
             if found_match:
                 # match with teams and captains
                 if found_match["has_teams"]:
-                    for i in range(0,len(found_match[ChatType.IRC.value])):
-                        self.send_all(found_match[ChatType.DISCORD.value][i], found_match[ChatType.IRC.value][i])
+                    self.send_all("\n".join(found_match[ChatType.DISCORD.value]), "\n".join(found_match[ChatType.IRC.value]), "\n".join(found_match[ChatType.MATRIX.value]), matrix_html=True)
                 else:
-                    self.send_all(found_match[ChatType.DISCORD.value], found_match[ChatType.IRC.value])
+                    self.send_all(found_match[ChatType.DISCORD.value], found_match[ChatType.IRC.value], found_match[ChatType.MATRIX.value], matrix_html=True)
 
             #start the background timer to delete old pickup games
             if self.picktimer is None or not self.picktimer.is_alive():
@@ -327,10 +326,9 @@ class Greedybot:
                 if found_match:
                     # match with teams and captains
                     if found_match["has_teams"]:
-                        for i in range(0,len(found_match[ChatType.IRC.value])):
-                            self.send_all(found_match[ChatType.DISCORD.value][i], found_match[ChatType.IRC.value][i])
+                        self.send_all("\n".join(found_match[ChatType.DISCORD.value]), "\n".join(found_match[ChatType.IRC.value]), "\n".join(found_match[ChatType.MATRIX.value]), matrix_html=True)
                     else:
-                        self.send_all(found_match[ChatType.DISCORD.value], found_match[ChatType.IRC.value])
+                        self.send_all(found_match[ChatType.DISCORD.value], found_match[ChatType.IRC.value], found_match[ChatType.MATRIX.value], matrix_html=True)
 
                 #start the background timer to delete old pickup games
                 if self.picktimer is None or not self.picktimer.is_alive():
@@ -751,10 +749,9 @@ class Greedybot:
             result, error_message, found_match = self.dbconnect.start_pickupgame(gametype)
             if result:
                 if found_match["has_teams"]:
-                    for i in range(0,len(found_match[ChatType.IRC.value])):
-                        self.send_all(found_match[ChatType.DISCORD.value][i], found_match[ChatType.IRC.value][i])
+                    self.send_all("\n".join(found_match[ChatType.DISCORD.value]), "\n".join(found_match[ChatType.IRC.value]), "\n".join(found_match[ChatType.MATRIX.value]), matrix_html=True)
                 else:
-                    self.send_all(found_match[ChatType.DISCORD.value], found_match[ChatType.IRC.value])
+                    self.send_all(found_match[ChatType.DISCORD.value], found_match[ChatType.IRC.value], found_match[ChatType.MATRIX.value], matrix_html=True)
                 self.build_pickuptext()
             else:
                 self.send_notice(user, error_message, chattype)
