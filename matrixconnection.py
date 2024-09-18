@@ -37,6 +37,8 @@ class MatrixConnector:
             return placeholders[index]
         
         text = re.sub(r'__FONT_TAG_(\d+)__', restore_font_tag, text)
+
+        text = text.replace("\n", "<br>")
         
         return text
 
@@ -78,7 +80,6 @@ class MatrixConnector:
     async def __process_message(self, room: MatrixRoom, event: RoomMessageText) -> None:
         logger.info(f"Process message. room: {room.display_name} message: <{event.sender}> {event.body}")
 
-        # TODO: Implement muted users feature in matrix
         should_bridge = True
 
         if event.sender in self.bot.muted_matrix_users:
@@ -89,6 +90,7 @@ class MatrixConnector:
             self.bot.send_all(message=event.body, chattype=ChatType.MATRIX.value, messagehead="<"+ event.sender + "> ", discordmention=True)
             
         # criteria for admin: if the user can kick in the room
+        # TODO: use specific powerlevel from setttings.yaml
         isAdmin = room.power_levels.can_user_kick(event.sender)
         if event.body.startswith("!"):
             self.bot.send_command(event.sender, event.body, ChatType.MATRIX.value, isAdmin)
