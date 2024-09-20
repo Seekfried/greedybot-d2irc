@@ -110,4 +110,13 @@ class MatrixConnector:
 
     def send_my_message(self, message, html=False):
         asyncio.run_coroutine_threadsafe(self.send_my_message_async(message, html), self.loop)
+    
+    def found_user_in_room(self, username) -> bool:
+        room: MatrixRoom = self.client.rooms.get(self.room)
+        if room is None:
+            return
+        if room.user_name(username):
+            return True
+        else:
+            return False
 
