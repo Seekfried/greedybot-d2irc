@@ -540,13 +540,13 @@ class Greedybot:
             else:
                 message:str = random.choice(self.xonotic["kills"]).format(killer, victim)
                 if self.irc_enabled:
-                    self.ircconnect.send_my_message(message)    
-                if self.matrix_enabled:
-                    self.matrixconnect.send_my_message(message)     
+                    self.ircconnect.send_my_message(message)                
                 if self.discord_enabled:       
                     if is_real_discord_user:
-                        victim = "@" + victim
-                    self.discordconnect.send_my_message_with_mention(message)
+                        discord_message = message.replace(victim, "@" + victim)
+                    self.discordconnect.send_my_message_with_mention(discord_message) 
+                if self.matrix_enabled:
+                    self.matrixconnect.send_my_message(message)
         else:
             self.send_all(random.choice(self.xonotic["suicides"]).format(killer))
 
