@@ -306,6 +306,8 @@ class DatabaseConnector:
                                         found_match = deepcopy(found)
                             else:
                                 error_message.append("Already added for " + pickentry.gameId.gametypeId.title)
+                        else:
+                            error_message.append("No gametype found with the name: " + gtypeentries)
                     self.__renew_all_player_entries(player)
             else:
                 if recipient is not None:
@@ -514,14 +516,14 @@ class DatabaseConnector:
             result_text = lastPickupGame.gametypeId.title + ", played on " + lastPickupGame.createdDate.strftime("%Y-%m-%d") + " was played with: "
             for player in lastPickupGamePlayers:
                 if chattype == ChatType.IRC.value:
-                    playername = player.playerId.ircName if player.playerId.ircName is not None else player.playerId.discordName
+                    playername = next((x for x in (player.playerId.ircName, player.playerId.discordName, player.playerId.matrixName) if x is not None), None)
                     result_text += playername + " " + ("("+player.playerId.statsIRCName + ") " if player.playerId.statsIRCName is not None else "")
                 elif chattype == ChatType.DISCORD.value:
-                    playername = player.playerId.discordName if player.playerId.discordName is not None else player.playerId.ircName
+                    playername = next((x for x in (player.playerId.discordName, player.playerId.matrixName, player.playerId.ircName) if x is not None), None)
                     result_text += playername + " " + ("("+player.playerId.statsDiscordName + ") " if player.playerId.statsDiscordName is not None else "")
                 elif chattype == ChatType.MATRIX.value:
-                    # TODO: Implement matrix connection
-                    pass
+                    playername = next((x for x in (player.playerId.matrixName, player.playerId.ircName, player.playerId.discordName) if x is not None), None)
+                    result_text += playername + " " + ("("+player.playerId.statsMatrixName + ") " if player.playerId.statsMatrixName is not None else "")
                 else:
                     db_logger.error("Unknown chattype: %s", chattype)
         else:
