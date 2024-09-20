@@ -500,37 +500,53 @@ class Greedybot:
         #example: !kill DrJaska
         #result: "DrJaska felt the electrifying air of Seek-y's Electro combo"
         logger.info("command_kill: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
-        killer = ""
+        killer:str = ""
+        is_real_irc_user:bool = False
+        is_real_discord_user:bool = False
+        is_real_matrix_user:bool = False
+
         if chattype == ChatType.IRC.value:
             killer = user
         elif chattype == ChatType.DISCORD.value:
             killer = user.name
         elif chattype == ChatType.MATRIX.value:
-            # TODO: Implement Matrix connection
-            pass
+            killer = user
         else:
             logger.error("Unknown chattype: ", chattype)
 
         if len(argument) > 1:    
             #get victim name        
             victim = argument[1]
-            #fill user list with discord/irc users
-            discord_users = self.discordconnect.get_online_members()
-            irc_users = list(self.ircconnect.get_online_users())
+            if self.irc_enabled:
+                #fill user list with irc
+                irc_users = list(self.ircconnect.get_online_users())
+                #victim is real user
+                is_real_irc_user = victim in irc_users
+            if self.discord_enabled and not is_real_irc_user:
+                #fill user list with discord
+                discord_users = self.discordconnect.get_online_members()
+                #victim is real user
+                is_real_discord_user = victim in discord_users
+            if self.matrix_enabled and not is_real_discord_user:
+                #victim is real user
+                is_real_matrix_user = self.matrixconnect.found_user_in_room(victim)                
             #random chance 
             is_random_chance = random.random() <= self.xonotic["chance"]
             #victim is real user
-            is_real_irc_user = victim in irc_users
-            is_real_discord_user = victim in discord_users
-            is_real_user = is_real_irc_user or is_real_discord_user
+            is_real_user = is_real_irc_user or is_real_discord_user or is_real_matrix_user
 
             if is_random_chance or (victim == killer) or not is_real_user:
                 self.send_all(random.choice(self.xonotic["suicides"]).format(killer))
             else:
-                self.ircconnect.send_my_message(random.choice(self.xonotic["kills"]).format(killer, victim))                
-                if is_real_discord_user:
-                    victim = "@" + victim
-                self.discordconnect.send_my_message_with_mention(random.choice(self.xonotic["kills"]).format(killer, victim))
+                message:str = random.choice(self.xonotic["kills"]).format(killer, victim)
+                if self.irc_enabled:
+                    self.ircconnect.send_my_message(message)                
+                if self.discord_enabled:       
+                    if is_real_discord_user:
+                        discord_message = message.replace(victim, "@" + victim)
+                    self.discordconnect.send_my_message_with_mention(discord_message) 
+                if self.matrix_enabled:
+                    self.matrixconnect.send_my_message(message)
         else:
             self.send_all(random.choice(self.xonotic["suicides"]).format(killer))
 
