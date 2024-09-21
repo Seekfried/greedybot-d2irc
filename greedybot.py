@@ -30,9 +30,9 @@ class Greedybot:
         self.muted_discord_users, self.muted_irc_users, self.muted_matrix_users = self.dbconnect.get_unbridged_players()
 
     async def run(self):
-        self.irc_enabled: bool = self.settings[ChatType.IRC.value] is not None
-        self.discord_enabled: bool = self.settings[ChatType.DISCORD.value] is not None
-        self.matrix_enabled: bool = self.settings[ChatType.MATRIX.value] is not None
+        self.irc_enabled: bool = ChatType.IRC.value in self.settings
+        self.discord_enabled: bool = ChatType.DISCORD.value in self.settings
+        self.matrix_enabled: bool = ChatType.MATRIX.value in self.settings
         
         if self.irc_enabled:
             self.ircconnect = IrcConnector(self.settings[ChatType.IRC.value], self)
@@ -126,11 +126,11 @@ class Greedybot:
     def send_notice(self, user, message, chattype):
         #sends message to only discord or to specific irc-user (for future: send direct message to discord-user)
         logger.info("send_notice: user=%s, message=%s, chattype=%s", user, message, chattype)
-        if chattype == ChatType.IRC.value:
+        if chattype == ChatType.IRC.value and self.irc_enabled:
             self.ircconnect.send_single_message(user,message)
-        elif chattype == ChatType.DISCORD.value:
+        elif chattype == ChatType.DISCORD.value and self.discord_enabled:
             self.discordconnect.send_my_message(message)
-        elif chattype == ChatType.MATRIX.value:
+        elif chattype == ChatType.MATRIX.value and self.matrix_enabled:
             self.matrixconnect.send_my_message(message, True)
         else:
             logger.error("Unknown chattype: ", chattype)
@@ -544,7 +544,9 @@ class Greedybot:
                 if self.discord_enabled:       
                     if is_real_discord_user:
                         discord_message = message.replace(victim, "@" + victim)
-                    self.discordconnect.send_my_message_with_mention(discord_message) 
+                        self.discordconnect.send_my_message_with_mention(discord_message)
+                    else:
+                        self.discordconnect.send_my_message_with_mention(message)
                 if self.matrix_enabled:
                     self.matrixconnect.send_my_message(message)
         else:
@@ -598,13 +600,15 @@ class Greedybot:
         #List all current online discord-members for irc-users and vice versa
         logger.info("command_online: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
 
-        if chattype == ChatType.IRC.value:
+        if chattype == ChatType.IRC.value and self.discord_enabled:
             self.ircconnect.send_my_message("On Discord are online: " + ", ".join(self.discordconnect.get_online_members()))
-        elif chattype == ChatType.DISCORD.value:
+        elif chattype == ChatType.DISCORD.value and self.irc_enabled:
             self.discordconnect.send_my_message("On IRC are online: " + ", ".join(self.ircconnect.get_online_users()))
         elif chattype == ChatType.MATRIX.value:
-            self.matrixconnect.send_my_message("On Discord are online: " + ", ".join(self.discordconnect.get_online_members()))
-            self.matrixconnect.send_my_message("On IRC are online: " + ", ".join(self.ircconnect.get_online_users()))
+            if self.discord_enabled:
+                self.matrixconnect.send_my_message("On Discord are online: " + ", ".join(self.discordconnect.get_online_members()))
+            if self.irc_enabled:
+                self.matrixconnect.send_my_message("On IRC are online: " + ", ".join(self.ircconnect.get_online_users()))
         else:
             logger.error("Unknown chattype: ", chattype)
 

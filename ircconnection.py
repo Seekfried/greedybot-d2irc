@@ -59,7 +59,9 @@ class IrcConnector(irc.bot.SingleServerIRCBot):
                 self.connection.privmsg(self.settings["channel"], message)
 
     def get_online_users(self):
-        return list(self.channels[self.settings["channel"]]._users.keys())
+        online_users = list(self.channels[self.settings["channel"]]._users.keys())
+        online_users.sort()
+        return online_users
 
     def send_my_message(self, message, messagehead = None):
         clean_message: str = message.strip()

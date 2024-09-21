@@ -70,10 +70,11 @@ class DiscordConnector:
         asyncio.run_coroutine_threadsafe(take_role_async(user, rolename), client.loop)  
 
     def get_online_members(self):
-        online_members =[]
+        online_members = []
         for user in channel.guild.members:
             if str(user.status) != "offline":
                 online_members.append(user.name)
+        online_members.sort()
         return online_members
     
     def run(self):
