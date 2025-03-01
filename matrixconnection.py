@@ -16,7 +16,7 @@ class MatrixConnector:
         self.botname = settings["botname"]
         self.password = settings["password"]        
         self.room = settings["room"]
-
+        self.message_queue: asyncio.Queue = asyncio.Queue()
 
     def __replace_tags(self, text):
         # Step 1: Use regex to find all font tags and temporarily replace them with placeholders
@@ -58,6 +58,9 @@ class MatrixConnector:
             # Set the start time as the current time
             self.start_time = time.time()
             
+            #setup message queue
+            self.loop.create_task(self.send_message_to_matrixroom())
+
             # Start listening for messages
             await self.client.sync_forever(timeout=30000)
         else:
@@ -94,19 +97,29 @@ class MatrixConnector:
         isAdmin = room.power_levels.can_user_kick(event.sender)
         if event.body.startswith("!"):
             self.bot.send_command(event.sender, event.body, ChatType.MATRIX.value, isAdmin)
+    
+    async def send_message_to_matrixroom(self):
+        while True:
+            message = await self.message_queue.get()
+            await self.client.room_send(room_id=self.room, message_type="m.room.message", content=message)
 
     async def send_my_message_async(self,message, html):
+        content = ""
         if html:
             formatted_message = self.__replace_tags(message)
-            await self.client.room_send(
-                room_id=self.room,
-                message_type="m.room.message",
-                content={"msgtype": "m.text", "body": formatted_message, "format": "org.matrix.custom.html", "formatted_body": formatted_message})
+            # await self.client.room_send(
+            #     room_id=self.room,
+            #     message_type="m.room.message",
+            #     content={"msgtype": "m.text", "body": formatted_message, "format": "org.matrix.custom.html", "formatted_body": formatted_message})
+            content={"msgtype": "m.text", "body": formatted_message, "format": "org.matrix.custom.html", "formatted_body": formatted_message}
         else:
-            await self.client.room_send(
-                room_id=self.room,
-                message_type="m.room.message",
-                content={"msgtype": "m.text", "body": message})
+            # await self.client.room_send(
+            #     room_id=self.room,
+            #     message_type="m.room.message",
+            #     content={"msgtype": "m.text", "body": message})
+            content={"msgtype": "m.text", "body": message}
+        await self.message_queue.put(content)
+        
 
     def send_my_message(self, message, html=False):
         asyncio.run_coroutine_threadsafe(self.send_my_message_async(message, html), self.loop)
