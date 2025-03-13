@@ -256,7 +256,6 @@ class Greedybot:
                               self.cmdresults["misc"]["registsuccess"].format(user, xonstatsId, irc_name),
                               self.cmdresults["misc"]["registsuccess"].format(user, xonstatsId, matrix_name),
                               matrix_html=True)
-                pass
             else:
                 logger.error("Unknown chattype: ", chattype)
         else: 
@@ -451,6 +450,26 @@ class Greedybot:
             else:
                 message = self.cmdresults["cmds"]["addgametype"]                
             self.send_notice(user, message, chattype) 
+        else:
+            self.send_notice(user, self.cmdresults["misc"]["restricted"], chattype)
+
+    def command_kick(self, user, argument, chattype, isadmin):
+        arg_chattype: str = argument[1] if len(argument) > 1 else None
+        arg_username: str = argument[2] if len(argument) > 2 else None
+        arg_reason: str = argument[3] if len(argument) > 3 else None
+        if isadmin:
+            if len(argument) < 3:
+                self.send_notice(user, "Usage: !kick chattype username <optional:reason>")
+            else:
+                if arg_chattype == ChatType.IRC.value:
+                    self.ircconnect.kick_user(arg_username, arg_reason)
+                elif arg_chattype == ChatType.DISCORD.value:
+                    self.discordconnect.kick_user(arg_username, arg_reason)
+                elif arg_chattype == ChatType.MATRIX.value:
+                    pass
+                else:
+                    logger.error("Unknown chattype: ", chattype)
+                    self.send_notice(user, "Unknown chattype", chattype)
         else:
             self.send_notice(user, self.cmdresults["misc"]["restricted"], chattype)
 

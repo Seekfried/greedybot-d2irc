@@ -61,14 +61,22 @@ class DiscordConnector:
     def give_role(self, username, gametype):
         global client
         user = discord.utils.get(channel.guild.members, name=username)
-        rolename = "player_" + gametype
-        asyncio.run_coroutine_threadsafe(give_role_async(user, rolename), client.loop)        
+        if user:
+            rolename = "player_" + gametype
+            asyncio.run_coroutine_threadsafe(give_role_async(user, rolename), client.loop)        
+
+    def kick_user(self, username, reason):
+        global client
+        user = discord.utils.get(channel.guild.members, name=username)
+        if user:
+            asyncio.run_coroutine_threadsafe(user.kick(reason=reason), client.loop) 
 
     def take_role(self, username, gametype):
         global client
         user = discord.utils.get(channel.guild.members, name=username)
-        rolename = "player_" + gametype
-        asyncio.run_coroutine_threadsafe(take_role_async(user, rolename), client.loop)  
+        if user:
+            rolename = "player_" + gametype
+            asyncio.run_coroutine_threadsafe(take_role_async(user, rolename), client.loop)  
 
     def get_online_members(self):
         online_members = []

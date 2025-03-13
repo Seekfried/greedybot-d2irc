@@ -75,6 +75,9 @@ class IrcConnector(irc.bot.SingleServerIRCBot):
 
     def send_single_message(self, user, message):
         self.connection.notice(user, message)
+
+    def kick_user(self, user, reason):
+        self.connection.kick(self.settings["channel"], user, reason)
         
     def close(self):
         self.running = False
