@@ -21,6 +21,7 @@ client = discord.Client(intents=intents)
 server = None
 channel = None
 bot = None
+message_queue = asyncio.Queue()
 
 class DiscordConnector:
     def __init__(self, sett, fbot):
@@ -91,7 +92,13 @@ class DiscordConnector:
 
 async def send_my_message_async(message):
     colorless_message = strip_irc_colors(message)
-    await channel.send(colorless_message.strip())
+    #await channel.send(colorless_message.strip())
+    await message_queue.put(colorless_message.strip())
+
+async def send_message_to_discord():
+    while True:
+        message = await message_queue.get()
+        await channel.send(message)
 
 async def send_my_file_async(path):
     await channel.send(file=discord.File(path))
@@ -225,3 +232,4 @@ async def on_ready():
         return
     
     channel = findChannel[0]
+    client.loop.create_task(send_message_to_discord())
