@@ -382,7 +382,7 @@ class Greedybot:
         else:            
             for gametype in result.keys():
                 resultText += gametype + result[gametype]["playercount"] +": "
-                players = result[gametype][ChatType.IRC.value] + result[gametype][ChatType.DISCORD.value]
+                players = result[gametype][ChatType.IRC.value] + result[gametype][ChatType.DISCORD.value] + result[gametype][ChatType.MATRIX.value]
                 resultText += ", ".join(players) + " "
             self.send_notice(user, resultText, chattype)
 
