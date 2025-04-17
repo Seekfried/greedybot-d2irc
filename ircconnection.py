@@ -15,6 +15,7 @@ class IrcConnector(irc.bot.SingleServerIRCBot):
         self.connection = None
 
         irc.client.ServerConnection.buffer_class.encoding = "utf-8"
+        irc.client.ServerConnection.buffer_class.errors = "replace"        
         irc.bot.SingleServerIRCBot.__init__(self, [\
             (settings["server"],\
             int(settings["port"]))],\
