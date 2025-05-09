@@ -93,18 +93,20 @@ class IrcConnector(irc.bot.SingleServerIRCBot):
     
     def on_kick(self, connection, event):
         if event.arguments[0]:
-            self.bot.remove_user_on_exit(event.arguments[0], ChatType.IRC.value)
+            if self.settings["remove-offline"]:
+                self.bot.remove_user_on_exit(event.arguments[0], ChatType.IRC.value)
             if self.settings["presence-update"]:
                 self.bot.send_all(message=event.arguments[0] + " got kicked.", chattype=ChatType.IRC.value)
 
     def on_part(self, connection, event):
-        self.bot.remove_user_on_exit(event.source.nick, ChatType.IRC.value)
+        if self.settings["remove-offline"]:
+            self.bot.remove_user_on_exit(event.source.nick, ChatType.IRC.value)
         if self.settings["presence-update"]:
             self.bot.send_all(message=event.source.nick + " left.", chattype=ChatType.IRC.value)
             
-
     def on_quit(self, connection, event):
-        self.bot.remove_user_on_exit(event.source.nick, ChatType.IRC.value)
+        if self.settings["remove-offline"]:
+            self.bot.remove_user_on_exit(event.source.nick, ChatType.IRC.value)
         if self.settings["presence-update"]:            
             self.bot.send_all(message=event.source.nick + " left.", chattype=ChatType.IRC.value)
     

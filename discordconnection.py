@@ -163,7 +163,8 @@ async def on_message(message):
 async def on_presence_update(before, after):
     global settings
     if after.status.name == "offline":
-        bot.remove_user_on_exit(after, "discord")
+        if settings["remove-offline"]:
+            bot.remove_user_on_exit(after, "discord")
         if settings["presence-update"]:
             bot.send_all(message="- @%s (%s) is now offline -" % (after.name, after.display_name), chattype=ChatType.DISCORD.value)
     if before.status.name == "offline" and settings["presence-update"]:

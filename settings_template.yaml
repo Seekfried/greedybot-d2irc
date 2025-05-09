@@ -26,6 +26,8 @@ irc:
   quitmsg: "Cya!"
   # Show messages if irc user left/joined the channel
   presence-update: false
+  # Remove pickups of offline users automatically
+  remove-offline: false
 
 discord:
   # Discord bot's token
@@ -40,6 +42,8 @@ discord:
   modrole: ""
   # Show messages if discord user goes offline/online
   presence-update: false
+  # Remove pickups of offline users automatically
+  remove-offline: false
 
 matrix:
   # Matrix server url

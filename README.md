@@ -2,7 +2,7 @@
 A pickupbot for managing Xonotic pickup games
 
 ### Features:
-- Managing pickup games over IRC and Discord (**maybe Matrix in the Future**)
+- Managing pickup games over IRC, Discord and Matrix
 - sync messages between IRC, Discord and Matrix, with command for users to disable bridge function (**privacy reasons**)
 - saving Players/Games/Gametypes/Servers in sqlite (**through peewee mysql, postgresql and cockroachdb possible too**)
 
@@ -65,6 +65,8 @@ irc:
   quitmsg: "Cya!"
   # Show messages if irc user left/joined the channel
   presence-update: false
+  # Remove pickups of offline users automatically
+  remove-offline: false
 
 discord:
   # Discord bot's token
@@ -79,6 +81,8 @@ discord:
   modrole: ""
   # Show messages if discord user goes offline/online
   presence-update: false
+  # Remove pickups of offline users automatically
+  remove-offline: false
 
 matrix:
   # Matrix server url
