@@ -1,0 +1,49 @@
+# Example configuration file showing how to configure IRC flood control
+# Copy this to your actual settings file and modify as needed
+
+# IRC Configuration
+irc:
+  server: "irc.example.com"
+  port: 6667
+  nickname: "YourBot"
+  password: "your_password"
+  channel: "#yourchannel"
+  botowner: "YourNick"
+  quitmsg: "Bot shutting down"
+  presence-update: true
+  remove-offline: true
+  
+  # Flood Control Configuration
+  # Choose one of: "default", "conservative", "aggressive"
+  # - default: Balanced settings for most IRC servers
+  # - conservative: Stricter limits for servers with tight flood protection
+  # - aggressive: Faster sending for lenient servers
+  flood_control_profile: "default"
+
+# Discord Configuration
+discord:
+  token: "your_discord_bot_token"
+  server: "your_discord_server_id"
+  channel: "your_discord_channel_id"
+  modrole: "moderator"
+  presence-update: true
+  remove-offline: true
+
+# Matrix Configuration  
+matrix:
+  server: "https://matrix.example.com"
+  botname: "@yourbot:example.com"
+  password: "your_matrix_password"
+  room: "!roomid:example.com"
+
+# Database Configuration
+database:
+  filename: "bot.db"
+
+# Bot Configuration
+bot:
+  pugtimewarning: 1200  # 20 minutes
+  pugtimeout: 1800      # 30 minutes
+
+# Additional flood control profiles can be defined in flood_control_config.py
+# You can also create custom profiles by modifying that file
