@@ -180,7 +180,7 @@ async def on_message(message):
             bot.send_all(message=attachment.url, chattype=ChatType.DISCORD.value, messagehead=f"<@{message.author.name} ({message.author.display_name})> URL: ")
 
     if message.content.startswith('!'):
-        if settings["modrole"] in [y.name.lower() for y in message.author.roles]:
+        if settings["modrole"] in [y.name for y in message.author.roles]:
             bot.send_command(message.author, message.content, ChatType.DISCORD.value, True)
         else:
             bot.send_command(message.author, message.content, ChatType.DISCORD.value, False)
