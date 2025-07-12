@@ -141,22 +141,24 @@ class Greedybot:
         
         if messagehead:
             if self.irc_enabled and chattype != ChatType.IRC.value:
+                irc_messagehead = "\x02" + messagehead + "\x02"
                 if ircmessage is not None:
-                    self.ircconnect.send_my_message(ircmessage, messagehead)
+                    self.ircconnect.send_my_message(ircmessage, irc_messagehead)
                 else:
-                    self.ircconnect.send_my_message(message, messagehead)
+                    self.ircconnect.send_my_message(message, irc_messagehead)
                     
             if self.matrix_enabled and chattype != ChatType.MATRIX.value:
                 if matrixmessage is not None:
-                    self.matrixconnect.send_my_message(messagehead + matrixmessage, matrix_html)
+                    self.matrixconnect.send_my_message(matrixmessage, matrix_html, messagehead)
                 else:
-                    self.matrixconnect.send_my_message(messagehead + message, matrix_html)
+                    self.matrixconnect.send_my_message(message, matrix_html, messagehead)
             
             if self.discord_enabled and chattype != ChatType.DISCORD.value:
+                discord_messagehead = "**" + messagehead + "**"
                 if discordmention:
-                    self.discordconnect.send_my_message_with_mention(messagehead + message)
+                    self.discordconnect.send_my_message_with_mention(discord_messagehead+ message)
                 else:
-                    self.discordconnect.send_my_message(messagehead + message)
+                    self.discordconnect.send_my_message(discord_messagehead + message)
         else:
             if self.irc_enabled and chattype != ChatType.IRC.value:
                 if ircmessage is not None:

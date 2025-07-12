@@ -103,10 +103,12 @@ class MatrixConnector:
             message = await self.message_queue.get()
             await self.client.room_send(room_id=self.room, message_type="m.room.message", content=message)
 
-    async def send_my_message_async(self,message, html):
+    async def send_my_message_async(self,message, html, messagehead):
         content = ""
-        if html:
+        if html or messagehead:
             formatted_message = self.__replace_tags(message)
+            if messagehead:
+                formatted_message = "<b>" + self.__replace_tags(messagehead)+ "</b>" + formatted_message 
             # await self.client.room_send(
             #     room_id=self.room,
             #     message_type="m.room.message",
@@ -121,8 +123,8 @@ class MatrixConnector:
         await self.message_queue.put(content)
         
 
-    def send_my_message(self, message, html=False):
-        asyncio.run_coroutine_threadsafe(self.send_my_message_async(message, html), self.loop)
+    def send_my_message(self, message, html=False, messagehead=None):
+        asyncio.run_coroutine_threadsafe(self.send_my_message_async(message, html, messagehead), self.loop)
     
     def found_user_in_room(self, username) -> bool:
         room: MatrixRoom = self.client.rooms.get(self.room)
