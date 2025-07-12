@@ -58,6 +58,16 @@ class DiscordConnector:
             message = role.mention + " " + (message)
             asyncio.run_coroutine_threadsafe(send_my_message_async(message), client.loop)
 
+    def create_role(self, gametype):
+        global client
+        rolename = "player_" + gametype
+        asyncio.run_coroutine_threadsafe(create_role_async(rolename), client.loop)        
+
+    def delete_role(self, gametype):
+        global client
+        rolename = "player_" + gametype
+        asyncio.run_coroutine_threadsafe(delete_role_async(rolename), client.loop)        
+
     def give_role(self, username, gametype):
         global client
         user = discord.utils.get(channel.guild.members, name=username)
@@ -103,13 +113,29 @@ async def send_message_to_discord():
 async def send_my_file_async(path):
     await channel.send(file=discord.File(path))
 
+async def create_role_async(rolename):
+    role = discord.utils.get(channel.guild.roles, name=rolename)
+    if not role:
+        await channel.guild.create_role(name=rolename, mentionable=True)
+        logger.info("Role " + rolename + " created")
+    else:
+        logger.error("Role " + rolename + " already exists!")
+
+async def delete_role_async(rolename):
+    role = discord.utils.get(channel.guild.roles, name=rolename)
+    if role:
+        await role.delete()
+        logger.info("Role " + role.name + " deleted")
+    else:
+        logger.error("Role " + rolename + " already exists!")
+
 async def give_role_async(user, rolename):
     role = discord.utils.get(channel.guild.roles, name=rolename)
     if role:
         await user.add_roles(role)
     else:
         try:
-            await channel.guild.create_role(name=rolename)
+            await channel.guild.create_role(name=rolename, mentionable=True)
             role = discord.utils.get(channel.guild.roles, name=rolename)
             await user.add_roles(role)
         except Exception as e:
