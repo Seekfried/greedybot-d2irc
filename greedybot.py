@@ -234,7 +234,7 @@ class Greedybot:
     def command_register(self, user, argument, chattype, isadmin):
         #command to connect player in database with their XonStats-account
         logger.info("command_register: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
-        xonstatsId: str = argument[1]
+        xonstatsId: str = argument[1] if len(argument) > 1 else None
         error_message: str = ""
         discord_name: str = ""
         irc_name: str = ""

@@ -854,7 +854,7 @@ class DatabaseConnector:
                 db_logger.error("Error in command_register: ", e, "Reason: ", e.args)
                 error_result = "Problem with XonStats"
         else:
-            error_result = "No ID given!"
+            error_result = "No ID given! Find your Xonstat-ID under stats.xonotic.org -> Usage: !register <xonstat-id>"
         db.close()
         db_logger.info("statsMatrixName=%s", matrix_name)
         return error_result, discord_name, irc_name, matrix_name
