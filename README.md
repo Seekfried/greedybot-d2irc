@@ -42,6 +42,10 @@ bot:
   pugtimewarning: 2400 
   # Delete player from pickup after x seconds
   pugtimeout: 3600
+  # Enable !online command to list all users, otherwise !online is a search command
+  enable-onlinelist: false
+  # Max number of !online results in search mode
+  max-onlineresult: 10
 
 database:
   # Name of created SQLite file
@@ -107,12 +111,29 @@ There are three other different setting files:
 ### Player commands
 - **!register**: Connect your account with your XonStats (stats.xonotic.org): `!register <xonstats-id>`
 - **!pickups**: Shows all possible gametypes available for pickupgames: `!pickups`
-- **!add**: Add to all current pickup games or specific games: `!add [gametype]`
+- **!add**: Add to all current pickup games or specific games: `!add [<gametype>]`
+  - examples:
+    - `!add` without argument -> add to all current pickup games
+    - `!add duel` -> add to current duel pickup or create duel pickup game
+    - `!add duel 2v2tdm 3v3ctf` -> add to current duel, 2v2tdm, 3v3ctf pickup or create duel, 2v2tdm, 3v3ctf pickup game
+
 - **!renew**: Renew pickup games
 - **!remove**: Remove from all pickup games or specific games: `!remove [<gametype>]`
+  - examples:
+    - `!remove` without argument -> remove from all current pickup games
+    - `!remove duel` -> remove from current duel pickup 
+    - `!remove duel 2v2tdm 3v3ctf` -> remove from current duel, 2v2tdm, 3v3ctf pickup
 - **!server**: Show all available Xonotic servers or specific server and their IP: `!server <servername>`
+  - examples:
+    - `!server` without arguments -> shows a list of all available server
+    - `!server <servername>` -> shows infos (ip4/ip6 address) for the server with the specific name `<servername>`
 - **!who**: List all current pickup games with players
-- **!online**: List all current online discord-members for irc-users and vice versa
+- **!online**: 
+  - With enable-onlinelist: 
+    - List all current online discord-members for irc-users and vice versa
+  - Else:
+    - `!online` (without argument) -> shows number of online discord-members for irc-users and vice versa
+    - `!online <username>` -> shows online users that start with or contain `<username>`
 - **!info**: Show xonstat information about one player per playername or xonstats-id: `!info {<playername>|<statsid>}`
 - **!subscribe**: Add to subscription to a specific gametype to get notified in !promote command:`!subscribe [<gametype>]`
 - **!unsubscribe**: Remove from all gametype subscriptions or specific gametype subscription: `!unsubscribe [<gametype>]`

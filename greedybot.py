@@ -99,6 +99,41 @@ class Greedybot:
                     time.sleep(mindiff)
             else:
                 return
+            
+    def search_online_members(self, username, chattype):
+        #search for online user in specific chattype (IRC/Discord)
+        search_results: list[str] = []
+        if chattype == ChatType.DISCORD.value:            
+            members = self.discordconnect.get_online_members()
+            for member in members:
+                if member.lower().startswith(username.lower()):
+                    search_results.append(member)
+                if len(search_results) == self.settings["bot"]["max-onlineresult"]:
+                    search_results.append("and more")
+                    break
+            if not search_results:
+                for member in members:
+                    if username.lower() in member.lower():                        
+                        search_results.append(member)
+                    if len(search_results) == self.settings["bot"]["max-onlineresult"]:
+                        search_results.append("and more")
+                        break
+        elif chattype == ChatType.IRC.value:
+            members = self.ircconnect.get_online_users()
+            for member in members:
+                if member.lower().startswith(username.lower()):
+                    search_results.append(member)
+                if len(search_results) == self.settings["bot"]["max-onlineresult"]:
+                    search_results.append("and more")
+                    break
+            if not search_results:
+                for member in members:
+                    if username.lower() in member.lower():                        
+                        search_results.append(member)
+                    if len(search_results) == self.settings["bot"]["max-onlineresult"]:
+                        search_results.append("and more")
+                        break                       
+        return search_results
 
     def set_irc_topic(self):
         #sets the current pickups as irc topic
@@ -611,18 +646,45 @@ class Greedybot:
     def command_online(self, user, argument, chattype, isadmin):
         #List all current online discord-members for irc-users and vice versa
         logger.info("command_online: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
+        user_search: str = argument[1] if len(argument) > 1 else None
 
-        if chattype == ChatType.IRC.value and self.discord_enabled:
-            self.ircconnect.send_my_message("On Discord are online: " + ", ".join(self.discordconnect.get_online_members()))
-        elif chattype == ChatType.DISCORD.value and self.irc_enabled:
-            self.discordconnect.send_my_message("On IRC are online: " + ", ".join(self.ircconnect.get_online_users()))
-        elif chattype == ChatType.MATRIX.value:
-            if self.discord_enabled:
-                self.matrixconnect.send_my_message("On Discord are online: " + ", ".join(self.discordconnect.get_online_members()))
-            if self.irc_enabled:
-                self.matrixconnect.send_my_message("On IRC are online: " + ", ".join(self.ircconnect.get_online_users()))
+        if self.settings["bot"]["enable-onlinelist"]:
+            if chattype == ChatType.IRC.value and self.discord_enabled:
+                self.ircconnect.send_my_message("On Discord are online: " + ", ".join(self.discordconnect.get_online_members()))
+            elif chattype == ChatType.DISCORD.value and self.irc_enabled:
+                self.discordconnect.send_my_message("On IRC are online: " + ", ".join(self.ircconnect.get_online_users()))
+            elif chattype == ChatType.MATRIX.value:
+                if self.discord_enabled:
+                    self.matrixconnect.send_my_message("On Discord are online: " + ", ".join(self.discordconnect.get_online_members()))
+                if self.irc_enabled:
+                    self.matrixconnect.send_my_message("On IRC are online: " + ", ".join(self.ircconnect.get_online_users()))
+            else:
+                logger.error("Unknown chattype: ", chattype)
         else:
-            logger.error("Unknown chattype: ", chattype)
+            if chattype == ChatType.IRC.value and self.discord_enabled:
+                if user_search:
+                    self.ircconnect.send_my_message("On Discord are online: " + ", ".join(self.search_online_members(username=user_search, chattype=ChatType.DISCORD.value)))
+                else:
+                    self.ircconnect.send_my_message("Number of online Discord-Users: " + str(len(self.discordconnect.get_online_members())))
+            elif chattype == ChatType.DISCORD.value and self.irc_enabled:
+                if user_search:
+                    self.discordconnect.send_my_message("On IRC are online: " + ", ".join(self.search_online_members(username=user_search, chattype=ChatType.IRC.value)))
+                else:
+                    self.discordconnect.send_my_message("Number of online IRC-Users: " + str(len(self.ircconnect.get_online_users())))
+
+            elif chattype == ChatType.MATRIX.value:
+                if self.discord_enabled:
+                    if user_search:
+                        self.matrixconnect.send_my_message("On Discord are online: " + ", ".join(self.search_online_members(username=user_search, chattype=ChatType.DISCORD.value)))
+                    else:
+                        self.matrixconnect.send_my_message("Number of online Discord-Users: " + str(len(self.discordconnect.get_online_members())))
+                if self.irc_enabled:
+                    if user_search:
+                        self.matrixconnect.send_my_message("On IRC are online: " + ", ".join(self.search_online_members(username=user_search, chattype=ChatType.IRC.value)))
+                    else:
+                        self.matrixconnect.send_my_message("Number of online IRC-Users: " + str(len(self.ircconnect.get_online_users())))
+            else:
+                logger.error("Unknown chattype: ", chattype)
 
     def command_lastgame(self, user, argument, chattype, isadmin):
         #Show the last played pickupgame with date and players
