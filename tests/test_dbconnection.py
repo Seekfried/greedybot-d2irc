@@ -25,7 +25,10 @@ def dbconnect():
 ####### Register/Stats Tests ######
 
 @pytest.mark.parametrize("user, xonstatid, chat, error_result, discord_empty, irc_empty, matrix_empty",
-                         [(DiscordTestUser("seek_y", "@seek_y"), "110074", ChatType.DISCORD.value, "", False, False, False), 
+                         [(DiscordTestUser("seek_y", "@seek_y"), "", ChatType.DISCORD.value, "No ID given! Find your Xonstat-ID under stats.xonotic.org -> Usage: !register <xonstat-id>", True, True, True),
+                          ("Seek-y", None, ChatType.IRC.value, "No ID given! Find your Xonstat-ID under stats.xonotic.org -> Usage: !register <xonstat-id>", True, True, True),
+                          ("seek-y", None, ChatType.MATRIX.value, "No ID given! Find your Xonstat-ID under stats.xonotic.org -> Usage: !register <xonstat-id>", True, True, True),
+                          (DiscordTestUser("seek_y", "@seek_y"), "110074", ChatType.DISCORD.value, "", False, False, False),
                           ("Seek-y", "110074", ChatType.IRC.value, "", False, False, False),
                           ("seek-y", "110074", ChatType.MATRIX.value, "", False, False, False),
                           ("Grunt", "110074", ChatType.IRC.value, "Another player is registered with Xonstat account #110074", False, False, False),
