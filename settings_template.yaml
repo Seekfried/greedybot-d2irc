@@ -3,6 +3,10 @@ bot:
   pugtimewarning: 2400 
   # Delete player from pickup after x seconds
   pugtimeout: 3600
+  # Enable !online command to list all users, otherwise !online is a search command
+  enable-onlinelist: false
+  # Max number of !online results in search mode
+  max-onlineresult: 10
 
 database:
   # Name of created SQLite file
