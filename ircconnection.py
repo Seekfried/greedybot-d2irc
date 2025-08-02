@@ -157,13 +157,13 @@ class IrcConnector(irc.bot.SingleServerIRCBot):
 
         if message.startswith('!'):
             if should_bridge:
-                self.bot.send_all(message="<"+ author + "> " + message, chattype=ChatType.IRC.value)
+                self.bot.send_all(message=message, chattype=ChatType.IRC.value, messagehead="<"+ author + "> ")
             if self.channels[event.target].is_oper(author):
                 self.bot.send_command(author, message, ChatType.IRC.value, True)
             else:
                 self.bot.send_command(author, message, ChatType.IRC.value, False)            
         elif should_bridge:
-            self.bot.send_all(message="<"+ author + "> " + message, chattype=ChatType.IRC.value, discordmention=True)
+            self.bot.send_all(message=message, chattype=ChatType.IRC.value, discordmention=True, messagehead="<"+ author + "> ")
     
     def run(self):
         self.start()
