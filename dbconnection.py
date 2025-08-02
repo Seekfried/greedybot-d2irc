@@ -214,8 +214,9 @@ class DatabaseConnector:
                 PickupEntries.delete().where(PickupEntries.playerId == player, PickupEntries.gameId == game.id).execute()
         return True
     
-    def add_gametypes(self, gt_title, gt_playercount, gt_teamcount, gt_xonstatname) -> str:
+    def add_gametypes(self, gt_title, gt_playercount, gt_teamcount, gt_xonstatname) -> tuple[bool, str]:
         message = ""
+        success = True
 
         db.connect()
         try:
@@ -224,9 +225,10 @@ class DatabaseConnector:
             message = "Gametype " + gt_title + " added."
         except:
             message = "Gametype already registered!"
+            success = False
         
         db.close()
-        return message
+        return success, message
 
     def add_player_to_games(self, user, gametypes:list[str], chattype, recipient=None) -> tuple[bool, list[str], dict]:
         db_logger.info("add_player_to_games: user=%s, gametypes=%s, chattype=%s", user, gametypes, chattype)
@@ -380,7 +382,7 @@ class DatabaseConnector:
                 game.delete_instance() 
         db.close()
     
-    def delete_gametypes(self, gametypes) -> list[str]:
+    def delete_gametypes(self, gametypes) -> list[(str, str)]:
         messages = []
 
         db.connect()
@@ -389,9 +391,9 @@ class DatabaseConnector:
                 gtype = GameTypes.select().where(GameTypes.title == gametypeentry).first()
                 if gtype is not None:
                     gtype.delete_instance()
-                    messages.append(gametypeentry + " deleted.")
+                    messages.append((gametypeentry, gametypeentry + " deleted."))
                 else:
-                    messages.append(gametypeentry + " not found.")
+                    messages.append((None, gametypeentry + " not found."))
         else:
             messages.append("To delete gametype: !removegametype [<gametypename>]")
         

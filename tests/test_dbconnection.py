@@ -163,16 +163,16 @@ def test_get_top_ten_withgame(dbconnect:DatabaseConnector, gametypes, result):
 ####### GameType Tests #######
 
 @pytest.mark.parametrize("gt_title, gt_playercount, gt_teamcount, gt_xonstatname, result",
-                         [("dm5", "5", None, None, "Gametype dm5 added."),
-                          ("2v2tdm3", "6", "3", "tdm", "Gametype 2v2tdm3 added."),
-                          ("2v2ca3", "6", "3", "ca", "Gametype already registered!")])
+                         [("dm5", "5", None, None, (True, "Gametype dm5 added.")),
+                          ("2v2tdm3", "6", "3", "tdm", (True, "Gametype 2v2tdm3 added.")),
+                          ("2v2ca3", "6", "3", "ca", (False, "Gametype already registered!"))])
 def test_add_gametype(dbconnect:DatabaseConnector, gt_title, gt_playercount, gt_teamcount, gt_xonstatname, result):
     message = dbconnect.add_gametypes(gt_title, gt_playercount, gt_teamcount, gt_xonstatname)
     assert message == result
 
 @pytest.mark.parametrize("gametypes, results",
-                         [(["dm5", "2v2tdm3"], ["dm5 deleted.", "2v2tdm3 deleted."]),
-                          (["2v2tdm3"], ["2v2tdm3 not found."]),
+                         [(["dm5", "2v2tdm3"], [("dm5", "dm5 deleted."), ("2v2tdm3", "2v2tdm3 deleted.")]),
+                          (["2v2tdm3"], [(None, "2v2tdm3 not found.")]),
                           (None, ["To delete gametype: !removegametype [<gametypename>]"])])
 def test_delete_gametypes(dbconnect:DatabaseConnector, gametypes, results):
     messages = dbconnect.delete_gametypes(gametypes)

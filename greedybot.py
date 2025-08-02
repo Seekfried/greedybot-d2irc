@@ -441,6 +441,7 @@ class Greedybot:
         #Usage: !addgametype <gametypetitle> <playercount> <teamcount> <statsname>
         #example: !addgametype 2v2v2ca 6 3 ca
         logger.info("command_addgametype: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
+        success: bool = False
         message: str = ""
         gt_title: str = argument[1] if len(argument) > 1 else None
         gt_playercount: str = argument[2] if len(argument) > 2 and argument[2].isdigit() else None
@@ -449,7 +450,9 @@ class Greedybot:
 
         if isadmin:
             if gt_playercount:
-                message = self.dbconnect.add_gametypes(gt_title, gt_playercount, gt_teamcount, gt_xonstatname)
+                success, message = self.dbconnect.add_gametypes(gt_title, gt_playercount, gt_teamcount, gt_xonstatname)
+                if self.discord_enabled and success:
+                    self.discordconnect.create_role(gt_title)
             else:
                 message = self.cmdresults["cmds"]["addgametype"]                
             self.send_notice(user, message, chattype) 
@@ -477,8 +480,15 @@ class Greedybot:
 
         if isadmin:
             messages = self.dbconnect.delete_gametypes(gametypes)
-            for message in messages:
-                self.send_notice(user, message, chattype)
+            if self.discord_enabled:
+                for success, message in messages:
+                    self.send_notice(user, message, chattype)
+                    if success:
+                        self.discordconnect.delete_role(success)
+
+            else:
+                for success, message in messages:
+                    self.send_notice(user, message, chattype)
         else:
             self.send_notice(user, self.cmdresults["misc"]["restricted"], chattype)
     
