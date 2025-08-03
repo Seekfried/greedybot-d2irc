@@ -1,7 +1,11 @@
 import irc.bot
 import time
+import asyncio
+import threading
+from collections import deque
 from chattype import ChatType
 from utils import create_logger
+from flood_control_config import get_flood_control_config
 
 logger = create_logger(__name__)
 
@@ -13,6 +17,26 @@ class IrcConnector(irc.bot.SingleServerIRCBot):
         self.bot = fbot        
         self.running = True
         self.connection = None
+        
+        # Load flood control configuration
+        flood_profile = settings.get("flood_control_profile", "default")
+        flood_config = get_flood_control_config(flood_profile)
+        
+        # Flood control settings
+        self.message_queue = deque()
+        self.queue_lock = threading.Lock()
+        self.last_message_time = 0
+        self.message_interval = flood_config["message_interval"]
+        self.burst_limit = flood_config["burst_limit"]
+        self.burst_window = flood_config["burst_window"]
+        self.min_message_delay = flood_config["min_message_delay"]
+        self.chunk_delay = flood_config["chunk_delay"]
+        self.burst_count = 0
+        self.burst_reset_time = 0
+        self.queue_processor_running = False
+        
+        logger.info(f"[IRC] Using flood control profile: {flood_profile}")
+        logger.info(f"[IRC] Flood control settings: interval={self.message_interval}s, burst_limit={self.burst_limit}, window={self.burst_window}s")
 
         irc.client.ServerConnection.buffer_class.encoding = "utf-8"
         irc.client.ServerConnection.buffer_class.errors = "replace"        
@@ -44,20 +68,102 @@ class IrcConnector(irc.bot.SingleServerIRCBot):
 
         return chunks
     
-    def __flood_control(self, message, messagehead = None):
-        if isinstance(message, str) and len(message) > 400:
-            result = self.__split_text_into_chunks(message)
-            for chunk in result:
-                if messagehead:
-                    self.connection.privmsg(self.settings["channel"], messagehead + chunk)
-                else:
-                    self.connection.privmsg(self.settings["channel"], chunk)
-                time.sleep(0.5)
-        else:
-            if messagehead:
-                self.connection.privmsg(self.settings["channel"], messagehead + message)
+    def __queue_message(self, message, messagehead=None, is_notice=False, target=None):
+        """Queue a message for rate-limited sending"""
+        with self.queue_lock:
+            message_data = {
+                'message': message,
+                'messagehead': messagehead,
+                'is_notice': is_notice,
+                'target': target,
+                'timestamp': time.time()
+            }
+            self.message_queue.append(message_data)
+            
+            # Start queue processor if not running
+            if not self.queue_processor_running:
+                self.queue_processor_running = True
+                processor_thread = threading.Thread(target=self.__process_message_queue, daemon=True)
+                processor_thread.start()
+
+    def __process_message_queue(self):
+        """Process queued messages with rate limiting"""
+        while self.running:
+            try:
+                with self.queue_lock:
+                    if not self.message_queue:
+                        self.queue_processor_running = False
+                        break
+                    
+                    message_data = self.message_queue.popleft()
+                
+                current_time = time.time()
+                
+                # Reset burst counter if window has passed
+                if current_time - self.burst_reset_time > self.burst_window:
+                    self.burst_count = 0
+                    self.burst_reset_time = current_time
+                
+                # Calculate delay needed
+                time_since_last = current_time - self.last_message_time
+                delay_needed = 0
+                
+                if self.burst_count >= self.burst_limit:
+                    # We've hit burst limit, enforce minimum interval
+                    if time_since_last < self.message_interval:
+                        delay_needed = self.message_interval - time_since_last
+                elif time_since_last < self.min_message_delay:
+                    delay_needed = self.min_message_delay - time_since_last
+                
+                if delay_needed > 0:
+                    time.sleep(delay_needed)
+                
+                # Send the message
+                self.__send_message_now(message_data)
+                
+                # Update counters
+                self.last_message_time = time.time()
+                self.burst_count += 1
+                
+            except Exception as e:
+                logger.error(f"Error in message queue processor: {e}")
+                time.sleep(1)  # Prevent tight error loops
+
+    def __send_message_now(self, message_data):
+        """Actually send the message to IRC"""
+        if not self.connection:
+            return
+            
+        message = message_data['message']
+        messagehead = message_data['messagehead']
+        is_notice = message_data['is_notice']
+        target = message_data['target']
+        
+        try:
+            if is_notice and target:
+                # Direct notice to user
+                self.connection.notice(target, message)
             else:
-                self.connection.privmsg(self.settings["channel"], message)
+                # Channel message
+                if isinstance(message, str) and len(message) > 400:
+                    # Split long messages
+                    chunks = self.__split_text_into_chunks(message)
+                    for i, chunk in enumerate(chunks):
+                        if i > 0:  # Add delay between chunks
+                            time.sleep(self.chunk_delay)
+                        
+                        final_message = (messagehead + chunk) if messagehead else chunk
+                        self.connection.privmsg(self.settings["channel"], final_message)
+                else:
+                    final_message = (messagehead + message) if messagehead else message
+                    self.connection.privmsg(self.settings["channel"], final_message)
+                    
+        except Exception as e:
+            logger.error(f"Error sending IRC message: {e}")
+
+    def __flood_control(self, message, messagehead=None):
+        """Legacy method - now queues messages instead of sending directly"""
+        self.__queue_message(message, messagehead)
 
     def get_online_users(self):
         online_users = list(self.channels[self.settings["channel"]]._users.keys())
@@ -75,7 +181,8 @@ class IrcConnector(irc.bot.SingleServerIRCBot):
             self.__flood_control(clean_message, messagehead)
 
     def send_single_message(self, user, message):
-        self.connection.notice(user, message)
+        """Send a notice to a specific user with rate limiting"""
+        self.__queue_message(message, is_notice=True, target=user)
         
     def close(self):
         self.running = False
