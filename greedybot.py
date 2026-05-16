@@ -121,7 +121,7 @@ class Greedybot:
             method(user, argument, chattype, isadmin)
         except Exception as e:
             self.send_notice(user, "Sorry, something went wrong", chattype)
-            logger.error("Error in command:", e)
+            logger.error("Error in command: %s", e)
 
     def send_notice(self, user, message, chattype):
         #sends message to only discord or to specific irc-user (for future: send direct message to discord-user)
