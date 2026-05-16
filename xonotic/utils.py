@@ -267,7 +267,10 @@ def get_quote(playername:str = None, quotedb_url:str = None) -> list[str]:
             if type(sendtext) is element.NavigableString:
                 lines.append(sendtext)
     except:
-        lines.append("No quote found for player: " + playername)
+        if playername:
+            lines.append("No quote found for player: " + playername)
+        else:
+            lines.append("No quote found")
 
     return lines
 
