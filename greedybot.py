@@ -747,7 +747,8 @@ class Greedybot:
         quotelines: list[str] = []
         message: str = ""
         q_player: str = argument[1] if len(argument) > 1 else None
-        quotelines = get_quote(q_player)
+        quotedb_url = self.settings.get("quotedb", {}).get("url") if self.settings.get("quotedb") else None
+        quotelines = get_quote(q_player, quotedb_url=quotedb_url)
         for line in quotelines:
             message += "Quote: \"" + line + "\"\n"
         self.send_all(message=message)

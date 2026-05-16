@@ -93,6 +93,11 @@ matrix:
   botname: ""
   # Matrix bot password
   password: ""
+
+# Optional: use the new QuoteDB service instead of the legacy one (devfull.de:27600).
+# Leave this section commented out to keep using the legacy service by default.
+#quotedb:
+#  url: "http://nauar.info:8000"
 ```
 
 You can create your own `settings.yaml` file based on the template `settings_template.yaml`.
