@@ -108,7 +108,8 @@ async def send_my_message_async(message):
 async def send_message_to_discord():
     while True:
         message = await message_queue.get()
-        await channel.send(message)
+        if message:
+            await channel.send(message)
 
 async def send_my_file_async(path):
     await channel.send(file=discord.File(path))

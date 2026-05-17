@@ -136,47 +136,65 @@ class Greedybot:
             logger.error("Unknown chattype: ", chattype)
 
     def send_all(self, message:str, ircmessage:str = None, matrixmessage:str = None, chattype:str = None, messagehead:str = None, discordmention:bool = False, matrix_html: bool = False):
-        logger.info("send_all: message=%s, ircmessage=%s, matrixmessage=%s, chattype=%s, messagehead=%s, discordmention=%s", 
+        logger.info("send_all: message=%s, ircmessage=%s, matrixmessage=%s, chattype=%s, messagehead=%s, discordmention=%s",
                     message, ircmessage, matrixmessage, chattype, messagehead, discordmention)
-        
+
         if messagehead:
             if self.irc_enabled and chattype != ChatType.IRC.value:
                 irc_messagehead = "\x02" + messagehead + "\x02"
-                if ircmessage is not None:
-                    self.ircconnect.send_my_message(ircmessage, irc_messagehead)
-                else:
-                    self.ircconnect.send_my_message(message, irc_messagehead)
-                    
+                try:
+                    if ircmessage is not None:
+                        self.ircconnect.send_my_message(ircmessage, irc_messagehead)
+                    else:
+                        self.ircconnect.send_my_message(message, irc_messagehead)
+                except Exception as e:
+                    logger.error("send_all: IRC send failed: %s", e)
+
             if self.matrix_enabled and chattype != ChatType.MATRIX.value:
-                if matrixmessage is not None:
-                    self.matrixconnect.send_my_message(matrixmessage, matrix_html, messagehead)
-                else:
-                    self.matrixconnect.send_my_message(message, matrix_html, messagehead)
-            
+                try:
+                    if matrixmessage is not None:
+                        self.matrixconnect.send_my_message(matrixmessage, matrix_html, messagehead)
+                    else:
+                        self.matrixconnect.send_my_message(message, matrix_html, messagehead)
+                except Exception as e:
+                    logger.error("send_all: Matrix send failed: %s", e)
+
             if self.discord_enabled and chattype != ChatType.DISCORD.value:
                 discord_messagehead = "**" + messagehead + "**"
-                if discordmention:
-                    self.discordconnect.send_my_message_with_mention(discord_messagehead+ message)
-                else:
-                    self.discordconnect.send_my_message(discord_messagehead + message)
+                try:
+                    if discordmention:
+                        self.discordconnect.send_my_message_with_mention(discord_messagehead+ message)
+                    else:
+                        self.discordconnect.send_my_message(discord_messagehead + message)
+                except Exception as e:
+                    logger.error("send_all: Discord send failed: %s", e)
         else:
             if self.irc_enabled and chattype != ChatType.IRC.value:
-                if ircmessage is not None:
-                    self.ircconnect.send_my_message(ircmessage)
-                else:
-                    self.ircconnect.send_my_message(message)
-                    
+                try:
+                    if ircmessage is not None:
+                        self.ircconnect.send_my_message(ircmessage)
+                    else:
+                        self.ircconnect.send_my_message(message)
+                except Exception as e:
+                    logger.error("send_all: IRC send failed: %s", e)
+
             if self.matrix_enabled and chattype != ChatType.MATRIX.value:
-                if matrixmessage is not None:
-                    self.matrixconnect.send_my_message(matrixmessage, matrix_html)
-                else:
-                    self.matrixconnect.send_my_message(message, matrix_html)
-            
+                try:
+                    if matrixmessage is not None:
+                        self.matrixconnect.send_my_message(matrixmessage, matrix_html)
+                    else:
+                        self.matrixconnect.send_my_message(message, matrix_html)
+                except Exception as e:
+                    logger.error("send_all: Matrix send failed: %s", e)
+
             if self.discord_enabled and chattype != ChatType.DISCORD.value:
-                if discordmention:
-                    self.discordconnect.send_my_message_with_mention(message)
-                else:
-                    self.discordconnect.send_my_message(message)
+                try:
+                    if discordmention:
+                        self.discordconnect.send_my_message_with_mention(message)
+                    else:
+                        self.discordconnect.send_my_message(message)
+                except Exception as e:
+                    logger.error("send_all: Discord send failed: %s", e)
 
     def wrong_command(self, user, argument, chattype, isadmin):
         #if user inputs wrong command
@@ -751,7 +769,8 @@ class Greedybot:
         quotelines = get_quote(q_player, quotedb_url=quotedb_url)
         for line in quotelines:
             message += "Quote: \"" + line + "\"\n"
-        self.send_all(message=message)
+        if message:
+            self.send_all(message=message)
 
     def command_serverinfo(self, user, argument, chattype, isadmin):
         #Get infos from server like name, map, player, gametype
