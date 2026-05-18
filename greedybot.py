@@ -141,12 +141,11 @@ class Greedybot:
 
         if messagehead:
             if self.irc_enabled and chattype != ChatType.IRC.value:
-                irc_messagehead = "\x02" + messagehead + "\x02"
                 try:
                     if ircmessage is not None:
-                        self.ircconnect.send_my_message(ircmessage, irc_messagehead)
+                        self.ircconnect.send_my_message(ircmessage, messagehead)
                     else:
-                        self.ircconnect.send_my_message(message, irc_messagehead)
+                        self.ircconnect.send_my_message(message, messagehead)
                 except Exception as e:
                     logger.error("send_all: IRC send failed: %s", e)
 
