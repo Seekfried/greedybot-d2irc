@@ -763,7 +763,7 @@ class Greedybot:
         logger.info("command_quote: user=%s, argument=%s, chattype=%s, isadmin=%s", user, argument, chattype, isadmin)
         quotelines: list[str] = []
         message: str = ""
-        q_player: str = argument[1] if len(argument) > 1 else None
+        q_player: str = " ".join(argument[1:]) if len(argument) > 1 else None
         quotedb_url = self.settings.get("quotedb", {}).get("url") if self.settings.get("quotedb") else None
         quotelines = get_quote(q_player, quotedb_url=quotedb_url)
         for line in quotelines:
