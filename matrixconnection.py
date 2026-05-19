@@ -101,27 +101,22 @@ class MatrixConnector:
     async def send_message_to_matrixroom(self):
         while True:
             message = await self.message_queue.get()
-            await self.client.room_send(room_id=self.room, message_type="m.room.message", content=message)
+            try:
+                await self.client.room_send(room_id=self.room, message_type="m.room.message", content=message)
+            except Exception as e:
+                logger.error("Matrix room_send failed: %s", e)
 
     async def send_my_message_async(self,message, html, messagehead):
         content = ""
         if html or messagehead:
             formatted_message = self.__replace_tags(message)
             if messagehead:
-                formatted_message = "<b>" + self.__replace_tags(messagehead)+ "</b>" + formatted_message 
-            # await self.client.room_send(
-            #     room_id=self.room,
-            #     message_type="m.room.message",
-            #     content={"msgtype": "m.text", "body": formatted_message, "format": "org.matrix.custom.html", "formatted_body": formatted_message})
+                formatted_message = "<b>" + self.__replace_tags(messagehead)+ "</b>" + formatted_message
             content={"msgtype": "m.text", "body": formatted_message, "format": "org.matrix.custom.html", "formatted_body": formatted_message}
         else:
-            # await self.client.room_send(
-            #     room_id=self.room,
-            #     message_type="m.room.message",
-            #     content={"msgtype": "m.text", "body": message})
             content={"msgtype": "m.text", "body": message}
         await self.message_queue.put(content)
-        
+
 
     def send_my_message(self, message, html=False, messagehead=None):
         asyncio.run_coroutine_threadsafe(self.send_my_message_async(message, html, messagehead), self.loop)
