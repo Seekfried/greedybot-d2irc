@@ -245,27 +245,53 @@ def get_serverinfo(serverip:str) -> list[str]:
         utils_logger.error("Server not online")
         return result, serverinfos
  
-def get_quote(playername:str = None) -> list[str]:
+def get_quote(playername:str = None, quotedb_url:str = None) -> list[str]:
+    lines = []
+    if quotedb_url:
+        return _get_quote_new(playername, quotedb_url)
     URL = "http://devfull.de:27600/random"
     quotes = []
-    lines = []
     if playername:
         URL = "http://devfull.de:27600/nick/" + playername
     try:
         page = requests.get(URL)
         soup = BeautifulSoup(page.content, "html.parser")
-       
+
         for tags in soup.find_all("div", class_="quote"):
             for items in tags.find_all("div", class_="text"):
                 quotes.append(items.contents)
-       
+
         quote_number = random.randint(0, len(quotes) - 1)
- 
+
         for sendtext in quotes[quote_number]:
             if type(sendtext) is element.NavigableString:
                 lines.append(sendtext)
     except:
-        lines.append("No quote found for player: " + playername)
- 
+        if playername:
+            lines.append("No quote found for player: " + playername)
+        else:
+            lines.append("No quote found")
+
     return lines
+
+
+def _get_quote_new(playername:str = None, base_url:str = "") -> list[str]:
+    try:
+        if playername:
+            resp = requests.get(base_url + "/api/quotes", params={"q": playername, "per_page": 100})
+            resp.raise_for_status()
+            data = resp.json()
+            quotes = data.get("quotes", [])
+            if not quotes:
+                return ["No quote found for player: " + playername]
+            quote = random.choice(quotes)
+        else:
+            resp = requests.get(base_url + "/api/quotes/random/one")
+            resp.raise_for_status()
+            quote = resp.json()
+        return [quote["text"]]
+    except Exception:
+        if playername:
+            return ["No quote found for player: " + playername]
+        return ["No quote found"]
 
